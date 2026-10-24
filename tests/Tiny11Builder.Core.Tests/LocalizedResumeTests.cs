@@ -34,7 +34,7 @@ public sealed class LocalizedResumeTests
         var before = fixture.Runner.Calls.Count;
         var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
             fixture.Engine.ResumeAsync(JobScenarios.JobFile(failed), fixture.Recipe, null, CancellationToken.None));
-        Assert.Contains("different Windows image", error.Message);
+        Assert.Contains("不同的 Windows 映像", error.Message);
         Assert.DoesNotContain(fixture.Runner.Calls.Skip(before), JobScenarios.Mutating);
     }
 }

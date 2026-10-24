@@ -53,7 +53,7 @@ public sealed partial class BuildEngine
 
     private static async Task EnsureNoPendingOperationsAsync(BuildSession s, CancellationToken token)
     {
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Checking an offline image for pending operations requires Windows.");
+        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("检查离线映像的挂起操作需要 Windows。");
         s.Log("Checking the image for pending operations before any component file is removed.");
         token.ThrowIfCancellationRequested();
         if (s.Capabilities.Any(item => item.Deferred)) throw Refuse(s, DeferredCapabilityEvidence(s), null);

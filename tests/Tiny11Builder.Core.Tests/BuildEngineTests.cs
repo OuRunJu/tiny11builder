@@ -54,7 +54,7 @@ public sealed class BuildEngineTests
         var messages = new List<BuildProgress>();
         await fixture.Engine.BuildAsync(fixture.Recipe with { SelectedOptions = ["recall-feature"] },
             new ImmediateProgress<BuildProgress>(messages.Add), CancellationToken.None);
-        Assert.Contains(messages, m => m.Message == "Recall optional feature" && m.State == BuildOperationState.Skipped &&
+        Assert.Contains(messages, m => m.Message == "Recall 可选功能" && m.State == BuildOperationState.Skipped &&
             m.Detail == "Not present in this image");
         Assert.DoesNotContain(fixture.Runner.Calls, c => c.Contains("/FeatureName:Recall"));
     }

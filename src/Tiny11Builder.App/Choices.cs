@@ -37,10 +37,10 @@ public sealed class InventoryChoice(ImageInventoryItem item) : ObservableChoice
     public ImageInventoryItem Item { get; } = item;
     public string Title => Item.Identity;
     public string Detail => $"{Item.Kind} · {Item.Detail}";
-    public string Risk => Item.Protected ? "Protected / potentially boot-critical" : "Application";
-    public string ModeLabel => $"Action for {Title}";
+    public string Risk => Item.Protected ? "受保护 / 可能影响启动" : "应用程序";
+    public string ModeLabel => $"{Title} 的操作";
     public bool HasModes => Item.Kind is ImageItemKind.Service or ImageItemKind.Feature;
-    public string[] Modes { get; } = ["Disable", "Remove"];
+    public string[] Modes { get; } = ["禁用", "删除"];
     public bool Selected { get => selected; set => Set(ref selected, value); }
     public int ModeIndex { get => modeIndex; set => Set(ref modeIndex, value); }
     public ExpertAction Action => new(Item.Kind, Item.Identity, ModeIndex == 0 ? ExpertActionMode.Disable : ExpertActionMode.Remove);
@@ -52,8 +52,8 @@ public sealed class BuildStageBoard
 {
     public BuildStageChoice[] Stages { get; } =
     [
-        new("Prepare media", "\uE8B7"), new("Export and mount", "\uE7C5"), new("Remove components", "\uE74D"),
-        new("Commit image", "\uE74E"), new("Compress image", "\uE8B9"), new("Create ISO", "\uE958"), new("Verify output", "\uE73E")
+        new("准备介质", "\uE8B7"), new("导出并挂载", "\uE7C5"), new("移除组件", "\uE74D"),
+        new("提交映像", "\uE74E"), new("压缩映像", "\uE8B9"), new("创建 ISO", "\uE958"), new("验证输出", "\uE73E")
     ];
 
     // Returns the phase the event belongs to, or -1 when it is not a displayed operation.
@@ -81,7 +81,7 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
 {
     private const string StagePrefix = "stage:";
     private static readonly int StateCount = Enum.GetValues<BuildOperationState>().Length;
-    private string status = "Waiting";
+    private string status = "等待中";
     private bool expanded;
     private bool halted;
     private bool doneEarlier;
@@ -100,7 +100,7 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
     public string Title { get; } = title;
     public string Glyph { get; } = glyph;
     public string Status { get => status; set { if (Set(ref status, value)) Notify(nameof(AutomationName)); } }
-    public string AutomationName => $"{Title}, {Status}";
+    public string AutomationName => $"{Title}，{Status}";
     public bool Expanded { get => expanded; set => Set(ref expanded, value); }
     public ObservableCollection<BuildOperationChoice> Operations { get; } = [];
 
@@ -111,7 +111,7 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
         Operations.Clear();
         halted = false;
         doneEarlier = false;
-        Status = "Waiting";
+        Status = "等待中";
         Expanded = false;
     }
 
@@ -171,13 +171,13 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
         RefreshStatus();
     }
 
-    public void Complete() => Status = doneEarlier ? "Done earlier" : "Complete";
+    public void Complete() => Status = doneEarlier ? "此前已完成" : "完成";
 
     public void MarkDoneEarlier()
     {
         if (Operations.Count > 0) return;
         doneEarlier = true;
-        Status = "Done earlier";
+        Status = "此前已完成";
     }
 
     private int InsertIndex(string stage)
@@ -215,11 +215,11 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
             if (tally.Own is BuildOperationState.Failed && tally.Items[(int)BuildOperationState.Failed] == 0) failed++;
             if (tally.Own is BuildOperationState.Cancelled && tally.Items[(int)BuildOperationState.Cancelled] == 0) cancelled++;
         }
-        var rest = pending == 0 ? "" : halted ? $" · {pending} not run" : $" · {pending} next";
-        Status = failed > 0 ? $"{(failed == 1 ? "Failed: " + ErrorText.Clip(FirstFailedTitle(), 48) : failed + " failed")} · {done} done{rest}" :
-            cancelled > 0 ? $"Cancelled · {done} done{rest}" :
-            running ? $"In progress · {done} done{rest}" :
-            pending > 0 ? (halted && done == 0 ? "Not run" : $"{done} done{rest}") : "Complete";
+        var rest = pending == 0 ? "" : halted ? $" · {pending} 项未运行" : $" · {pending} 项待处理";
+        Status = failed > 0 ? $"{(failed == 1 ? "失败：" + ErrorText.Clip(FirstFailedTitle(), 48) : failed + " 项失败")} · {done} 项完成{rest}" :
+            cancelled > 0 ? $"已取消 · {done} 项完成{rest}" :
+            running ? $"进行中 · {done} 项完成{rest}" :
+            pending > 0 ? (halted && done == 0 ? "未运行" : $"{done} 项完成{rest}") : "完成";
     }
 
     private string FirstFailedTitle() =>
@@ -252,9 +252,9 @@ public sealed class BuildOperationChoice(string id, string title, string stage) 
     }
     public string Status => State switch
     {
-        BuildOperationState.Running => "In progress", BuildOperationState.Completed => "Done",
-        BuildOperationState.Skipped => "Skipped", BuildOperationState.Failed => "Failed",
-        BuildOperationState.Cancelled => "Cancelled", _ => NotRun ? "Not run" : "Next"
+        BuildOperationState.Running => "进行中", BuildOperationState.Completed => "完成",
+        BuildOperationState.Skipped => "已跳过", BuildOperationState.Failed => "失败",
+        BuildOperationState.Cancelled => "已取消", _ => NotRun ? "未运行" : "下一步"
     };
     public string Glyph => State switch
     {
@@ -262,7 +262,7 @@ public sealed class BuildOperationChoice(string id, string title, string stage) 
         BuildOperationState.Running => "\uE895", BuildOperationState.Skipped => "\uE72A",
         BuildOperationState.Cancelled => "\uE711", _ => NotRun ? "\uE738" : "\uE823"
     };
-    public string AutomationName => $"{Title}, {Status}";
+    public string AutomationName => $"{Title}，{Status}";
 
     public void SetDetail(string text)
     {

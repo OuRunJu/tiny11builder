@@ -76,7 +76,7 @@ public sealed partial class BuildEngine
     private static async Task SaveCommittedCheckpointAsync(BuildSession s, SourceIdentity source)
     {
         string? failure = null;
-        await s.Tracking.RunAsync("checkpoint:committed", "Commit", "Save verified progress so an interrupted build can resume",
+        await s.Tracking.RunAsync("checkpoint:committed", "Commit", "保存已验证进度以便中断的构建可继续",
             async () =>
             {
                 try
@@ -178,7 +178,7 @@ public sealed partial class BuildEngine
         var bootImages = await s.Dism.GetImagesAsync(privateBoot, token).ConfigureAwait(false);
         var setup = bootImages.FirstOrDefault(i => i.Name.Contains("Setup", StringComparison.OrdinalIgnoreCase)) ??
             bootImages.FirstOrDefault(i => i.Index == 2) ??
-            throw new InvalidDataException("Cannot identify Windows Setup in boot.wim.");
+            throw new InvalidDataException("无法在 boot.wim 中识别 Windows 安装程序。");
         s.Dism.DisableOptimizedMount();
         s.Mounted = true;
         await s.Dism.RunAsync(token, "/Mount-Image", $"/ImageFile:{privateBoot}", $"/Index:{setup.Index}",
@@ -194,7 +194,7 @@ public sealed partial class BuildEngine
         var edited = await s.Dism.GetImagesAsync(privateBoot, CancellationToken.None).ConfigureAwait(false);
         if (edited.Count != bootImages.Count ||
             !edited.Select(image => image.Index).Order().SequenceEqual(bootImages.Select(image => image.Index).Order()))
-            throw new InvalidDataException("The edited Windows Setup image no longer lists its original indexes. The staged boot.wim was left unchanged.");
+            throw new InvalidDataException("编辑后的 Windows 安装映像不再列出原始索引。已保留暂存的 boot.wim。");
         var (editedLength, editedSha) = await Digest.HashAsync(privateBoot, null, CancellationToken.None).ConfigureAwait(false);
         // The replacement is announced durably BEFORE it happens, so the checkpoint can always describe the media. If that
         // record cannot be written, the staged original is simply left as it is.
@@ -203,7 +203,7 @@ public sealed partial class BuildEngine
             SetupState = SetupProgress.Replacing, EditedBootSha256 = editedSha,
             Report = saved.Report with { LegacyInstallerEnabled = SetupInstaller.RequiresLegacy(s.Recipe) }
         }))
-            throw new IOException("The saved progress could not record the Setup image replacement, so the staged boot.wim was left unchanged.");
+            throw new IOException("无法记录安装映像替换的已保存进度，已保留暂存的 boot.wim。");
         File.Move(privateBoot, bootWim, overwrite: true);
         UpdateCheckpoint(s, saved => saved with
         {
@@ -248,7 +248,7 @@ public sealed partial class BuildEngine
         var finalImages = await s.Dism.GetImagesAsync(partial, CancellationToken.None).ConfigureAwait(false);
         if (finalImages.Count != 1 || finalImages[0].Version.Build != s.Image.Version.Build ||
             finalImages[0].Architecture != s.Image.Architecture)
-            throw new InvalidDataException("The final installation image failed its edition/build/architecture check.");
+            throw new InvalidDataException("最终安装映像未通过版本/构建/架构检查。");
         Digest.RequireCompleteWim(partial, "The compressed installation image");
         File.Move(partial, Path.Combine(sources, leaf), overwrite: false);
         PathSafety.DeleteOwnedDirectory(partialDirectory, s.Job.Directory);
@@ -469,7 +469,7 @@ public sealed partial class BuildEngine
         secondary.AddRange(error.Data.Keys.OfType<string>()
             .Where(key => key.StartsWith(BuildOperationTracker.ObserverFailureKey, StringComparison.Ordinal))
             .Select(key => error.Data[key]).OfType<Exception>());
-        Closing("cancel:logs", "Saving logs and stopped-job status");
+        Closing("cancel:logs", "正在保存日志与已停止作业状态");
         Guard(() => s.Job.Log(error.ToString()));
         if (discardFailure is not null) Guard(() => s.Job.Log(DiscardFailureText(discardFailure)));
         Guard(s.Job.Flush);

@@ -22,6 +22,32 @@ public static class BuildProgressText
     public static string ForDisplay(string text) => string.Join(Environment.NewLine,
         text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None).Where(line => !IsConsoleProgress(line)));
 
+    public static string DisplayName(string stage) => stage switch
+    {
+        "Prepare" => "准备",
+        "Copy media" => "复制介质",
+        "Export edition" => "导出版本",
+        "Mount" => "挂载",
+        "Inventory" => "清单",
+        "Custom servicing" => "自定义维护",
+        "Remove apps" => "移除应用",
+        "Optional features" => "可选功能",
+        ".NET 3.5" => ".NET 3.5",
+        "Windows settings" => "Windows 设置",
+        "Component cleanup" => "组件清理",
+        "Advanced payloads" => "高级资源包",
+        "Core pruning" => "Core 修剪",
+        "Redundant data" => "冗余数据",
+        "Commit" => "提交",
+        ResumeCheckStage => "检查已保存进度",
+        "Setup image" => "安装映像",
+        "Compress" => "压缩",
+        "Create ISO" => "创建 ISO",
+        "Verify output" => "验证输出",
+        "Cancel cleanup" => "取消清理",
+        _ => stage
+    };
+
     public static int Phase(string stage) => stage switch
     {
         "Prepare" or "Copy media" => 0,
@@ -57,8 +83,8 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
 {
     private static readonly (string Prefix, BuildOperationState State)[] PayloadMessages =
     [
-        ("Plan payload: ", BuildOperationState.Pending), ("Removing payload: ", BuildOperationState.Running),
-        ("Payload removed: ", BuildOperationState.Completed)
+        ("计划资源包：", BuildOperationState.Pending), ("正在移除资源包：", BuildOperationState.Running),
+        ("已移除资源包：", BuildOperationState.Completed)
     ];
     private sealed record Operation(string Stage, string Title, BuildOperationState State = BuildOperationState.Pending, string? Detail = null);
     private readonly Dictionary<string, Operation> operations = new(StringComparer.Ordinal);
@@ -142,7 +168,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
     /// <summary>Marks the open stage as deliberately skipped; <see cref="EndStage"/> keeps that outcome instead of reporting Completed.</summary>
     public void SkipStage(string reason)
     {
-        var id = stageId ?? throw new InvalidOperationException("There is no open stage to skip.");
+        var id = stageId ?? throw new InvalidOperationException("没有可跳过的打开阶段。");
         var title = operations[id].Title;
         itemId = null;
         Publish(id, BuildOperationState.Skipped, reason);
@@ -160,7 +186,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
         {
             await action().ConfigureAwait(false);
             Publish(id, BuildOperationState.Completed, completedDetail?.Invoke());
-            log($"Completed: {title}");
+            log($"已完成：{title}");
         }
         catch (Exception error)
         {
@@ -179,7 +205,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
 
     /// <param name="detailFor">Truthful per-item outcome, evaluated after the batch succeeds (for example each feature's real state).</param>
     public async Task RunBatchAsync(IReadOnlyList<(string Id, string Title)> items, string stage, Func<Task> action,
-        string noun = "optional features", Func<string, string?>? detailFor = null)
+        string noun = "可选功能", Func<string, string?>? detailFor = null)
     {
         if (items.Count == 0) return;
         foreach (var (id, title) in items)
@@ -197,14 +223,14 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
             {
                 var actual = detailFor?.Invoke(id);
                 Publish(id, BuildOperationState.Completed, (actual is null ? "" : actual + " ") +
-                    $"Batch of {items.Count} {noun}; its duration is shared by the whole batch, not per item.");
+                    $"共 {items.Count} 个{noun} 的批处理；耗时由整批共享，非逐项。");
             }
-            log($"Completed batch: {items.Count} {noun}");
+            log($"已完成批处理：{items.Count} 个{noun}");
         }
         catch (Exception error)
         {
             foreach (var (id, _) in items)
-                PublishFailure(id, error, $"{char.ToUpperInvariant(noun[0])}{noun[1..]} batch failed. No individual success is assumed. " + error);
+                PublishFailure(id, error, $"{char.ToUpperInvariant(noun[0])}{noun[1..]} 批处理失败。不假定单项成功。 " + error);
             throw;
         }
     }
@@ -236,7 +262,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
             if (!text.StartsWith(prefix, StringComparison.Ordinal)) continue;
             var title = text[prefix.Length..];
             var nativeId = "payload:" + title;
-            if (!operations.ContainsKey(nativeId)) Plan(nativeId, Stage, $"Remove payload: {title}");
+            if (!operations.ContainsKey(nativeId)) Plan(nativeId, Stage, $"移除资源包：{title}");
             if (state != BuildOperationState.Pending) Publish(nativeId, state);
             if (state == BuildOperationState.Running) currentPercent = null;
             itemId = state == BuildOperationState.Running ? nativeId : null;
@@ -260,7 +286,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
         var operation = operations[id];
         if (operation.State == BuildOperationState.Skipped) return;
         Publish(id, BuildOperationState.Completed);
-        log($"Completed stage: {operation.Title}");
+        log($"已完成阶段：{operation.Title}");
     }
 
     public void Fail(Exception error, bool cancelled)
@@ -279,7 +305,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
             try { Publish(id, state, error.ToString()); }
             catch (Exception observer) { (faults ??= []).Add(observer); }
         }
-        if (faults is not null) throw new AggregateException("The progress observer failed while recording the failure.", faults);
+        if (faults is not null) throw new AggregateException("记录失败时进度观察程序失败。", faults);
     }
 
     private void Publish(string id, BuildOperationState state, string? detail = null)

@@ -107,49 +107,49 @@ public sealed partial class BuildEngine
         var directory = job.Directory;
         var state = job.Current;
         if (state.Id != Path.GetFileName(directory)["tiny11-".Length..] || state.Purpose != "build")
-            throw new InvalidDataException("This job is not an interrupted build, so it cannot be resumed.");
-        if (state.Status == "completed") throw new InvalidDataException("This build already completed, so there is nothing to resume.");
+            throw new InvalidDataException("此作业不是中断的构建，无法继续。");
+        if (state.Status == "completed") throw new InvalidDataException("此构建已完成，无需继续。");
         if (state.Status == "recovered")
-            throw new InvalidDataException("This job was recovered and its saved work was discarded, so it cannot be resumed.");
+            throw new InvalidDataException("此作业已恢复且已丢弃保存的工作，无法继续。");
         var checkpoint = CheckpointStore.Read(directory);
         tracking.Restore(checkpoint.Operations);
-        tracking.BeginStage(BuildProgressText.ResumeCheckStage, "Verifying the saved image, setup files and settings before continuing.");
+        tracking.BeginStage(BuildProgressText.ResumeCheckStage, "继续前正在验证已保存的映像、安装文件与设置。");
         var committed = checkpoint.Phase == ResumePhase.Committed;
         if (!committed && (checkpoint.SetupState is SetupProgress.Pending or SetupProgress.Replacing) &&
             !SetupInstaller.RequiresLegacy(requested))
-            throw new InvalidDataException("The saved progress is inconsistent: the image is compressed but Setup was never finished.");
+            throw new InvalidDataException("已保存进度不一致：映像已压缩但安装程序从未完成。");
 
         // ---- settings: the recipe identity, frozen fields, paths and tools (cheap checks first) ----
         var recipeFile = Path.Combine(directory, JobCheckpoint.RecipeFileName);
         PathSafety.RejectReparsePoints(recipeFile);
         if (!File.Exists(recipeFile))
-            throw new InvalidDataException("The job's original recipe (recipe.json) is missing, so the saved work cannot be trusted.");
+            throw new InvalidDataException("作业原始方案 (recipe.json) 缺失，无法信任已保存工作。");
         var recipeBytes = await File.ReadAllBytesAsync(recipeFile, token).ConfigureAwait(false);
         if (!Digest.HashBytes(recipeBytes).Equals(checkpoint.RecipeSha256, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("The job's original recipe changed after its progress was saved, so the saved work cannot be trusted.");
+            throw new InvalidDataException("进度保存后作业原始方案已更改，无法信任已保存工作。");
         BuildRecipe original;
         try
         {
             original = JsonSerializer.Deserialize<BuildRecipe>(recipeBytes, JsonDefaults.Options) ??
-                throw new InvalidDataException("The job's original recipe is empty.");
+                throw new InvalidDataException("作业原始方案为空。");
         }
-        catch (JsonException error) { throw new InvalidDataException("The job's original recipe is damaged: " + error.Message, error); }
+        catch (JsonException error) { throw new InvalidDataException("作业原始方案已损坏：" + error.Message, error); }
         original.ValidateOptions();
         var differences = FrozenDifferences(original, requested);
         if (differences.Length > 0)
-            throw new InvalidDataException($"The resume recipe changes settings that are frozen for this job ({string.Join(", ", differences)}). " +
+            throw new InvalidDataException($"继续方案更改了此作业已冻结的设置（{string.Join(", ", differences)}). " +
                 "Only the output location, servicing tools, final compression and keeping working files can change.");
         if (!committed && requested.Compression != checkpoint.CompressedWith)
-            throw new InvalidDataException($"The final image was already compressed with {checkpoint.CompressedWith}; " +
+            throw new InvalidDataException($"最终映像已使用 {checkpoint.CompressedWith}; " +
                 $"it cannot be resumed with {requested.Compression}.");
         if (!Path.GetDirectoryName(directory)!.Equals(PathSafety.Full(original.WorkspacePath), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("This job is not inside the workspace named by its recipe.");
+            throw new InvalidDataException("此作业不在其方案指定的工作区内。");
         if (SetupInstaller.RequiresBootEdit(original) != (checkpoint.SetupState != SetupProgress.NotRequired) &&
             !(SetupInstaller.RequiresLegacy(original) && !original.SelectedOptions.Contains("hardware-bypass") &&
                 checkpoint.SetupState == SetupProgress.NotRequired && !checkpoint.Report.LegacyInstallerEnabled))
-            throw new InvalidDataException("The saved Setup-image state does not match the job's recipe, so the saved work cannot be trusted.");
+            throw new InvalidDataException("已保存的安装映像状态与作业方案不匹配，无法信任已保存工作。");
         if (string.IsNullOrEmpty(requested.OscdimgPath))
-            throw new InvalidDataException("Windows ADK oscdimg.exe is required to create a bootable ISO.");
+            throw new InvalidDataException("创建可启动 ISO 需要 Windows ADK oscdimg.exe。");
         PathSafety.ValidateForResume(requested);
         host.ValidateTools(requested);
         host.ValidateResume(requested, checkpoint.Image, (committed ? checkpoint.WorkingImage.Length * 2 : checkpoint.CompressedImage!.Length) + (3L << 30));
@@ -167,12 +167,12 @@ public sealed partial class BuildEngine
             var transient = SamePath(mountDirectory, jobMount) && imageFile is not null &&
                 SamePath(imageFile, Path.Combine(directory, "setup", "boot.wim"));
             if (!transient)
-                throw new InvalidDataException($"An image of this job is still mounted ({mountDirectory}). " +
+                throw new InvalidDataException($"此作业的映像仍挂载在 ({mountDirectory})。 " +
                     "Resume continues only from an unmounted, committed image; unmount it first.");
             staleSetupMount = true;
         }
         if (!staleSetupMount && Directory.Exists(jobMount) && Directory.EnumerateFileSystemEntries(jobMount).Any())
-            throw new InvalidDataException("The job's mount folder is not empty, so a mounted image may remain. Resume was refused.");
+            throw new InvalidDataException("作业挂载文件夹非空，可能仍有挂载映像。已拒绝继续。");
         var staleHiveJournals = Directory.EnumerateFiles(directory, "Tiny11Builder_Offline_*.hive.json").Any();
 
         // ---- the saved image (positive proof: size, header, SHA-256 and identity, not a timestamp) ----
@@ -180,16 +180,16 @@ public sealed partial class BuildEngine
         {
             var working = Path.Combine(directory, "working.wim");
             PathSafety.RejectReparsePoints(working);
-            if (!File.Exists(working)) throw new InvalidDataException("The saved working image (working.wim) is missing.");
+            if (!File.Exists(working)) throw new InvalidDataException("已保存的工作映像 (working.wim) 缺失。");
             if (new FileInfo(working).Length != checkpoint.WorkingImage.Length)
-                throw new InvalidDataException("The saved working image has a different size than when it was committed.");
+                throw new InvalidDataException("已保存工作映像大小与提交时不一致。");
             Digest.RequireCompleteWim(working, "The saved working image");
             await tracking.RunAsync("resume:image", BuildProgressText.ResumeCheckStage, "Verify the saved Windows image", async () =>
             {
                 var (_, sha) = await Digest.HashAsync(working, percent => tracking.Output($"Verifying the saved Windows image: {percent:0}%"), token)
                     .ConfigureAwait(false);
                 if (!sha.Equals(checkpoint.WorkingImage.Sha256, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("The saved working image changed after it was committed (its SHA-256 differs), so it cannot be trusted.");
+                    throw new InvalidDataException("提交后已保存工作映像已更改（SHA-256 不同），无法信任。");
             }).ConfigureAwait(false);
             RequireSameImage(await dism.GetImagesAsync(working, token).ConfigureAwait(false), checkpoint.Image, "The saved working image");
         }
@@ -235,19 +235,19 @@ public sealed partial class BuildEngine
         PathSafety.RejectReparsePoints(jobFile);
         if (Path.GetFileName(jobFile) != "job.json" || !leaf.StartsWith("tiny11-", StringComparison.Ordinal) ||
             !Guid.TryParseExact(leaf[7..], "N", out _))
-            throw new InvalidDataException("Select job.json inside a tiny11-owned job directory.");
+            throw new InvalidDataException("请在 tiny11 作业目录内选择 job.json。");
         return directory;
     }
 
     private static void RequireSameImage(IReadOnlyList<WindowsImage> images, WindowsImage expected, string what)
     {
-        if (images.Count != 1) throw new InvalidDataException($"{what} must contain exactly one image but contains {images.Count}.");
+        if (images.Count != 1) throw new InvalidDataException($"{what} 必须仅包含一个映像，但包含 {images.Count}.");
         var actual = images[0];
         // File hashes already verify the saved bytes. Display names can change when a console-decoding bug is fixed.
         if (actual.Architecture != expected.Architecture || actual.Version != expected.Version ||
             !actual.Edition.Equals(expected.Edition, StringComparison.OrdinalIgnoreCase) ||
             !actual.Installation.Equals(expected.Installation, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"{what} is a different Windows image ({actual.Summary}) than this job was building ({expected.Summary}).");
+            throw new InvalidDataException($"{what} is a 不同的 Windows 映像 ({actual.Summary}) 与此作业正在构建的映像 ({expected.Summary}).");
     }
 
     // Frozen by default: a field added to BuildRecipe later cannot change on resume unless it is listed as free here.
