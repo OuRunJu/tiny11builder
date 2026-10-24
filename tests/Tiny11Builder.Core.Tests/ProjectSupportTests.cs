@@ -25,7 +25,7 @@ public sealed class ProjectSupportTests
     public void Unsupported_links_are_not_guessed_and_support_never_unlocks_features()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ProjectSupport.Link((SupportDestination)99));
-        Assert.Contains("All app features remain free", ProjectSupport.Purpose);
+        Assert.Contains("应用的全部功能保持免费", ProjectSupport.Purpose);
     }
 
     [Fact]

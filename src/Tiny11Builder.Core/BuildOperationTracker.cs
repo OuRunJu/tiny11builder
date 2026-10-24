@@ -305,7 +305,7 @@ internal sealed class BuildOperationTracker(IProgress<BuildProgress>? progress, 
             try { Publish(id, state, error.ToString()); }
             catch (Exception observer) { (faults ??= []).Add(observer); }
         }
-        if (faults is not null) throw new AggregateException("记录失败时进度观察程序失败。", faults);
+        if (faults is not null) throw new AggregateException("The progress observer failed while recording the failure.", faults);
     }
 
     private void Publish(string id, BuildOperationState state, string? detail = null)

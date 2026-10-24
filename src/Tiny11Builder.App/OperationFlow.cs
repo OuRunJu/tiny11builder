@@ -259,7 +259,7 @@ internal static class ResumeSupport
         text.AppendLine("原构建的移除选择保持不变。继续时无法更改。");
         if (recipe.Flavor == BuildFlavor.Core)
             text.AppendLine("Core：无 Windows 更新、无 Microsoft Defender、无恢复环境。仅在隔离的测试虚拟机中使用。");
-        if (SetupLabels.Legacy(recipe) is { } legacy) text.AppendLine(legacy + ".");
+        if (SetupLabels.Legacy(recipe) is { } legacy) text.AppendLine(legacy + "。");
         if (recipe.ExpertActions.Length > 0)
             text.AppendLine("单项移除包含受保护项。映像可能无法启动。");
         text.AppendLine();
@@ -667,7 +667,7 @@ internal sealed class CancellationFlow
     private CancelView Ended(OperationEnd e)
     {
         var tone = e.NeedsAttention ? CancelTone.Error : e.Warning.Length > 0 ? CancelTone.Warning : CancelTone.Done;
-        var title = e.Title.TrimEnd('.');
+        var title = e.Title.TrimEnd('.', '。', ' ');
         string heading, body, status;
         if (e.RecoveryRequired)
         {

@@ -209,7 +209,7 @@ public sealed class AppFlowTests
             SelectedOptions = CleanupCatalog.ForMode(BuildMode.Tiny11Core), Compression = Compression.Maximum
         };
         var text = ResumeSupport.Describe(recipe);
-        Assert.Contains(@"Output: C:\tiny11\out.iso", text);
+        Assert.Contains(@"输出：C:\tiny11\out.iso", text);
         Assert.Contains("Tiny11 Core", text);
         Assert.Contains("最大压缩 WIM", text);
         Assert.Contains("无法更改", text);
@@ -447,7 +447,7 @@ public sealed class AppFlowTests
         Assert.True(run.Settled.IsCompletedSuccessfully);
         Assert.Contains("无法释放取消令牌：The handle is busy.", run.Warning);
         Assert.Equal(RunResult.Succeeded, run.End!.Result);   // the outcome is unchanged ...
-        Assert.Contains("could not be released", run.End.Warning);   // ... and the problem travels with it
+        Assert.Contains("无法释放取消令牌", run.End.Warning);   // ... and the problem travels with it
         var view = Begin(run).View;
         Assert.Equal(CancelTone.Warning, view.Tone);
         Assert.Contains("The handle is busy.", view.Warning);
