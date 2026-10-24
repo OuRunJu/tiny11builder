@@ -360,7 +360,7 @@ internal sealed class OperationRun
     public OperationKind Kind { get; }
     public CancellationToken Token { get; }
 
-    // 完成s once RunOperation has finished everything, its own cleanup included. It never faults.
+    // Completes once RunOperation has finished everything, its own cleanup included. It never faults.
     public Task Settled => settled.Task;
 
     public bool CancelRequested { get { lock (gate) return requested; } }
@@ -423,7 +423,7 @@ internal sealed class OperationRun
 
     internal bool TryOpenPrompt() { lock (gate) { if (promptOpen) return false; promptOpen = true; return true; } }
 
-    internal void 关闭Prompt() { lock (gate) promptOpen = false; }
+    internal void ClosePrompt() { lock (gate) promptOpen = false; }
 }
 
 // The words for cancelling each kind of operation. The question, the wait and the result all read from here, so every
@@ -488,18 +488,18 @@ internal static class CancelCleanup
     public const string LogsOperation = "cancel:logs";
 }
 
-internal enum CancelStage { Confirming, Cancelling, Ended, 关闭d }
+internal enum CancelStage { Confirming, Cancelling, Ended, Closed }
 
 internal enum CancelPhase { Waiting, DiscardingMount, SavingLogs }
 
-internal enum CancelTone { Neutral, 完成, Warning, Error }
+internal enum CancelTone { Neutral, Done, Warning, Error }
 
 internal enum CancelLink { None, OpenLogs, CopyDetails }
 
 // Everything the dialog shows at one moment. Null button text means the button is hidden.
 internal sealed record CancelView(CancelStage Stage, CancelTone Tone, string Title, string Body, string Status, string Detail,
     string Footnote, string Warning, bool ShowProgress, bool Indeterminate, double Percent, string? ConfirmText,
-    string? 关闭Text, bool Can关闭, CancelLink Link, string LinkText);
+    string? CloseText, bool CanClose, CancelLink Link, string LinkText);
 
 // One cancel interaction for one run: asking, stopping, ended. Asking sends nothing; the cancel is sent once, by Confirm,
 // and only while the run is still alive. If the run ends first, the question turns into what actually happened.
@@ -532,7 +532,7 @@ internal sealed class CancellationFlow
     public OperationRun Run => run;
 
     // Escape, the close button and closing the app are refused only while the stop is being carried out.
-    public bool Can关闭 => Stage != CancelStage.Cancelling;
+    public bool CanClose => Stage != CancelStage.Cancelling;
 
     // True only for the call that sent the cancel. The run having ended, or a cancel already sent, sends nothing.
     public bool Confirm()
@@ -559,21 +559,21 @@ internal sealed class CancellationFlow
     // "Keep building": nothing was sent, and nothing is.
     public void Decline()
     {
-        if (Stage == CancelStage.Confirming) 关闭();
+        if (Stage == CancelStage.Confirming) Close();
     }
 
     // The dialog is gone; the run may be prompted again.
-    public void 关闭()
+    public void Close()
     {
-        if (Stage == CancelStage.关闭d) return;
-        Stage = CancelStage.关闭d;
-        run.关闭Prompt();
+        if (Stage == CancelStage.Closed) return;
+        Stage = CancelStage.Closed;
+        run.ClosePrompt();
     }
 
     // The run has settled, cleanup included. Reads what really happened from the run.
     public void RunSettled()
     {
-        if (Stage is CancelStage.Ended or CancelStage.关闭d) return;
+        if (Stage is CancelStage.Ended or CancelStage.Closed) return;
         Conclude(beforeConfirm: Stage == CancelStage.Confirming);
     }
 
@@ -581,7 +581,7 @@ internal sealed class CancellationFlow
     // percentages (for example the discard of a mount) belong to something that has no name here.
     public void Observe(BuildProgress progress)
     {
-        if (Stage is CancelStage.Ended or CancelStage.关闭d) return;
+        if (Stage is CancelStage.Ended or CancelStage.Closed) return;
         if (progress.Stage == CancelCleanup.Stage)
         {
             ObserveCleanup(progress);
