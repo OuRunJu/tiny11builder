@@ -54,7 +54,7 @@ public sealed class BuildEngineTests
         var messages = new List<BuildProgress>();
         await fixture.Engine.BuildAsync(fixture.Recipe with { SelectedOptions = ["recall-feature"] },
             new ImmediateProgress<BuildProgress>(messages.Add), CancellationToken.None);
-        Assert.Contains(messages, m => m.Message == "Recall optional feature" && m.State == BuildOperationState.Skipped &&
+        Assert.Contains(messages, m => m.Message == "Recall 可选功能" && m.State == BuildOperationState.Skipped &&
             m.Detail == "Not present in this image");
         Assert.DoesNotContain(fixture.Runner.Calls, c => c.Contains("/FeatureName:Recall"));
     }
@@ -160,7 +160,7 @@ public sealed class BuildEngineTests
         // The failed ISO step leaves verified saved progress, so Recovery refuses until discarding it is explicit.
         var refused = await Assert.ThrowsAsync<CheckpointedJobException>(() =>
             fixture.Engine.RecoverAsync(marker, fixture.Recipe.DismPath, CancellationToken.None));
-        Assert.Contains("Resume", refused.Message);
+        Assert.Contains("继续构建", refused.Message);
         Assert.True(Directory.Exists(Path.Combine(failure.WorkDirectory, "media")));
         Assert.True(File.Exists(Path.Combine(failure.WorkDirectory, JobCheckpoint.FileName)));
         await fixture.Engine.RecoverAsync(marker, fixture.Recipe.DismPath, CancellationToken.None, discardCommitted: true);

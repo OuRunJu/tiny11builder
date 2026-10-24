@@ -50,7 +50,7 @@ internal static class OperationOutcomes
         var recovery = failure is not null && NeedsRecovery(failure);
         var (title, message) = cancelled ? Cancelled(kind, canResume) : Failed(kind, ErrorText.Reason(error), canResume);
         if (recovery)
-            message += " The job's mounted copy could not be discarded. Use Recover workspace and choose this job's job.json.";
+            message += " 无法丢弃该作业的已挂载副本。请使用「恢复工作区」并选择此作业的 job.json。";
         return new(kind, cancelled, title, message, cancelled && !recovery ? NoticeLevel.Warning : NoticeLevel.Error,
             failure?.WorkDirectory, error.ToString(), recovery, failure is not null && !recovery ? CleanupProblems(failure) : "");
     }
@@ -61,7 +61,7 @@ internal static class OperationOutcomes
     {
         if (failure.InnerException is not AggregateException { InnerExceptions.Count: > 1 } aggregate) return "";
         var reasons = aggregate.InnerExceptions.Skip(1).Select(ErrorText.Reason).Distinct(StringComparer.Ordinal);
-        return ErrorText.Clip("Some cleanup steps reported problems: " + string.Join(" ", reasons), 320);
+        return ErrorText.Clip("部分清理步骤出现问题：" + string.Join(" ", reasons), 320);
     }
 
     public static bool IsCancellation(OperationKind kind, Exception error) => error switch
@@ -77,27 +77,27 @@ internal static class OperationOutcomes
 
     private static (string Title, string Message) Cancelled(OperationKind kind, bool canResume) => kind switch
     {
-        OperationKind.Build => ("Build cancelled.", "Your source was not changed. Working files and logs are kept." +
-            (canResume ? " Saved progress can be resumed." : "")),
-        OperationKind.Resume => ("Resume cancelled.", "Saved progress and logs are kept." + (canResume ? " You can resume again." : "")),
-        OperationKind.Inspect => ("Inspection cancelled.", "The image was not changed."),
-        OperationKind.Inventory => ("Component list cancelled.", "The image was not changed."),
-        OperationKind.Download => ("Download cancelled.", "Partial downloads are kept, so you can continue later. No source media was modified."),
-        OperationKind.Recover => ("Recovery cancelled.", "Run Recover workspace again to finish cleaning up this job."),
-        OperationKind.Elevate => ("Restart cancelled.", "The app is still running without administrator privileges."),
-        _ => ("Cancelled.", "Nothing was changed.")
+        OperationKind.Build => ("构建已取消。", "源文件未更改。工作文件与日志已保留。" +
+            (canResume ? " 可继续已保存的进度。" : "")),
+        OperationKind.Resume => ("继续构建已取消。", "已保存的进度与日志已保留。" + (canResume ? " 可以再次继续。" : "")),
+        OperationKind.Inspect => ("检查已取消。", "映像未更改。"),
+        OperationKind.Inventory => ("组件列表已取消。", "映像未更改。"),
+        OperationKind.Download => ("下载已取消。", "部分下载已保留，可稍后继续。未修改源介质。"),
+        OperationKind.Recover => ("恢复已取消。", "请再次运行「恢复工作区」以完成此作业的清理。"),
+        OperationKind.Elevate => ("重启已取消。", "应用仍在无管理员权限下运行。"),
+        _ => ("已取消。", "未做任何更改。")
     };
 
     private static (string Title, string Message) Failed(OperationKind kind, string reason, bool canResume) => kind switch
     {
-        OperationKind.Build => ("Build failed.", reason + (canResume ? " Saved progress can be resumed." : "")),
-        OperationKind.Resume => ("Resume failed.", reason + (canResume ? " Saved progress is kept, so you can resume again." : "")),
-        OperationKind.Inspect => ("The image could not be inspected.", reason),
-        OperationKind.Inventory => ("The component list could not be loaded.", reason),
-        OperationKind.Download => ("The download did not complete.", reason),
-        OperationKind.Recover => ("Recovery did not complete.", reason),
-        OperationKind.Elevate => ("The app could not restart as administrator.", reason),
-        _ => ("The operation did not complete.", reason)
+        OperationKind.Build => ("构建失败。", reason + (canResume ? " 可继续已保存的进度。" : "")),
+        OperationKind.Resume => ("继续构建失败。", reason + (canResume ? " Saved progress is kept, so you can resume again." : "")),
+        OperationKind.Inspect => ("无法检查映像。", reason),
+        OperationKind.Inventory => ("无法加载组件列表。", reason),
+        OperationKind.Download => ("下载未完成。", reason),
+        OperationKind.Recover => ("恢复未完成。", reason),
+        OperationKind.Elevate => ("应用无法以管理员身份重启。", reason),
+        _ => ("操作未完成。", reason)
     };
 }
 
@@ -117,7 +117,7 @@ internal static class ErrorText
     public static string Reason(Exception error)
     {
         var summary = Summary(Primary(error).Message);
-        return summary.Length > 0 ? summary : "No further details were reported.";
+        return summary.Length > 0 ? summary : "未报告更多详细信息。";
     }
 
     public static string Summary(string? text, int limit = NoticeLimit)
@@ -225,18 +225,18 @@ internal static class ResumeSupport
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            return new(jobFile, "", null, "That is not a valid job file path.");
+            return new(jobFile, "", null, "这不是有效的作业文件路径。");
         }
         if (!Path.GetFileName(file).Equals(JobFileName, StringComparison.OrdinalIgnoreCase))
-            return new(file, directory, null, "Choose the job.json file inside the build's tiny11-… folder.");
+            return new(file, directory, null, "请选择构建目录 tiny11-… 文件夹内的 job.json 文件。");
         if (!hasCheckpoint(directory)) return new(file, directory, null, NoCheckpoint);
         var recipeFile = Path.Combine(directory, recipeFileName);
         if (!File.Exists(recipeFile))
-            return new(file, directory, null, "This job's saved recipe is missing, so it can't be resumed.");
+            return new(file, directory, null, "此作业缺少已保存的方案，无法继续。");
         try { return new(file, directory, BuildRecipe.Read(recipeFile), null); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
         {
-            return new(file, directory, null, "This job's saved recipe could not be read. " + ErrorText.Reason(error));
+            return new(file, directory, null, "无法读取此作业已保存的方案。 " + ErrorText.Reason(error));
         }
     }
 
@@ -245,25 +245,25 @@ internal static class ResumeSupport
         var mode = CleanupCatalog.ModeForRecipe(recipe) switch
         {
             BuildMode.Tiny11 => "Tiny11", BuildMode.Tiny11Core => "Tiny11 Core",
-            _ => recipe.Flavor == BuildFlavor.Core ? "Custom with Core removals" : "Custom"
+            _ => recipe.Flavor == BuildFlavor.Core ? "自定义（含 Core 移除项）" : "自定义"
         };
         var compression = recipe.Compression switch
         {
-            Compression.Recovery => "Recovery ESD", Compression.Maximum => "Maximum WIM", _ => "Fast WIM"
+            Compression.Recovery => "恢复 ESD", Compression.Maximum => "最大压缩 WIM", _ => "快速 WIM"
         };
         var text = new StringBuilder();
-        text.AppendLine($"Output: {recipe.OutputPath}");
-        text.AppendLine($"Mode: {mode} · {recipe.SelectedOptions.Length} removal groups · {recipe.ExpertActions.Length} individual actions");
-        text.AppendLine($"Compression: {compression}");
+        text.AppendLine($"输出：{recipe.OutputPath}");
+        text.AppendLine($"模式：{mode} · {recipe.SelectedOptions.Length} 个移除组 · {recipe.ExpertActions.Length} 个单项操作");
+        text.AppendLine($"压缩：{compression}");
         text.AppendLine();
-        text.AppendLine("The removal choices from the original build stay as they were. They can't be changed when resuming.");
+        text.AppendLine("原构建的移除选择保持不变。继续时无法更改。");
         if (recipe.Flavor == BuildFlavor.Core)
-            text.AppendLine("Core: no Windows Update, no Microsoft Defender, no recovery environment. Use only in an isolated test VM.");
-        if (SetupLabels.Legacy(recipe) is { } legacy) text.AppendLine(legacy + ".");
+            text.AppendLine("Core：无 Windows 更新、无 Microsoft Defender、无恢复环境。仅在隔离的测试虚拟机中使用。");
+        if (SetupLabels.Legacy(recipe) is { } legacy) text.AppendLine(legacy + "。");
         if (recipe.ExpertActions.Length > 0)
-            text.AppendLine("Individual removals include protected items. The image may not boot.");
+            text.AppendLine("单项移除包含受保护项。映像可能无法启动。");
         text.AppendLine();
-        text.Append("The saved progress is verified first. If anything does not match, nothing is changed.");
+        text.Append("将先验证已保存的进度。如有任何不匹配，不会进行更改。");
         return text.ToString();
     }
 }
@@ -278,18 +278,18 @@ internal static class SetupLabels
         if (!SetupInstaller.RequiresLegacy(recipe)) return null;
         var core = recipe.Flavor == BuildFlavor.Core;
         var payload = recipe.ExpertActions.Any(a => a.Kind == ImageItemKind.ComponentPayload && a.Mode == ExpertActionMode.Remove);
-        return core && payload ? "Core and component-payload removals" : core ? "Core removals" :
-            payload ? "component-payload removals" : "the selected removals";
+        return core && payload ? "Core 与组件资源包移除" : core ? "Core 移除项" :
+            payload ? "组件资源包移除" : "所选移除项";
     }
 
     public static string? Legacy(BuildRecipe recipe) =>
-        LegacyReason(recipe) is { } reason ? $"Legacy installer: automatic (needed for {reason})" : null;
+        LegacyReason(recipe) is { } reason ? $"旧版安装程序：自动（因 {reason} 需要）" : null;
 }
 
 // "3 of 7 stages done": the count shown over the stage history, read from the same rows the history draws.
 internal static class StageSummary
 {
-    private static bool IsDone(BuildStageChoice stage) => stage.Status is "Complete" or "Done earlier";
+    private static bool IsDone(BuildStageChoice stage) => stage.Status is "完成" or "此前已完成";
 
     public static string Describe(BuildStageBoard board)
     {
@@ -297,8 +297,8 @@ internal static class StageSummary
         var done = stages.Count(IsDone);
         var failed = stages.Count(stage => stage.Operations.Any(o => o.State == BuildOperationState.Failed));
         var cancelled = stages.Any(stage => stage.Operations.Any(o => o.State == BuildOperationState.Cancelled));
-        var text = done == stages.Length ? $"All {stages.Length} stages done" : $"{done} of {stages.Length} stages done";
-        return failed > 0 ? $"{text} · {failed} failed" : cancelled ? text + " · cancelled" : text;
+        var text = done == stages.Length ? $"全部 {stages.Length} 个阶段已完成" : $"{done}/{stages.Length} 个阶段已完成";
+        return failed > 0 ? $"{text} · {failed} 项失败" : cancelled ? text + " · 已取消" : text;
     }
 }
 
@@ -320,15 +320,15 @@ internal sealed record OperationEnd(OperationKind Kind, RunResult Result, bool R
     public bool NeedsAttention => RecoveryRequired || Result == RunResult.Failed;
 
     public static OperationEnd Succeeded(OperationKind kind) =>
-        new(kind, RunResult.Succeeded, false, "Finished.", "", null, "");
+        new(kind, RunResult.Succeeded, false, "已完成。", "", null, "");
 
     public static OperationEnd From(OperationOutcome outcome) =>
         new(outcome.Kind, outcome.Cancelled ? RunResult.Cancelled : RunResult.Failed, outcome.RecoveryRequired,
             outcome.Title, outcome.Message, outcome.WorkDirectory, outcome.Details, outcome.Warning);
 
     public static OperationEnd Unknown(OperationKind kind) =>
-        new(kind, RunResult.Failed, false, "The operation did not complete.",
-            "It ended without saying how, so it is not shown as finished. Check the logs.", null, "");
+        new(kind, RunResult.Failed, false, "操作未完成。",
+            "结束时未说明结果，因此不显示为已完成。请查看日志。", null, "");
 }
 
 // One call of RunOperation as seen by whoever may cancel it. A prompt is bound to the run it was opened for, so it can
@@ -394,7 +394,7 @@ internal sealed class OperationRun
         catch (AggregateException failure)
         {
             // The token is cancelled all the same, but a step that reacts to it failed. That is shown, never swallowed.
-            NoteWarning("The cancel was sent, but a step that reacts to it failed: " + ErrorText.Reason(failure));
+            NoteWarning("已发送取消，但响应取消的步骤失败：" + ErrorText.Reason(failure));
         }
         return CancelRequest.Requested;
     }
@@ -417,7 +417,7 @@ internal sealed class OperationRun
             end ??= OperationEnd.Unknown(Kind);
         }
         try { source.Dispose(); }
-        catch (Exception error) { NoteWarning("The cancel token could not be released: " + ErrorText.Reason(error)); }
+        catch (Exception error) { NoteWarning("无法释放取消令牌：" + ErrorText.Reason(error)); }
         finally { settled.TrySetResult(); }
     }
 
@@ -435,48 +435,48 @@ internal static class CancelPrompts
 {
     // The caption of the shell button for every busy operation, exactly as the user named it. What it would cancel is
     // in its hint (the tooltip and help text), so the caption is the same everywhere.
-    public const string ButtonLabel = "Cancel safely";
+    public const string ButtonLabel = "安全取消";
 
     public static CancelCopy For(OperationKind kind) => kind switch
     {
-        OperationKind.Build => new("build", "Cancel this build?",
-            "The build stops at the next safe point. That can take a few minutes, because the image operation that is running is allowed to finish first. " +
-            "Your source is never changed. The mounted copy is safely unmounted; working files, saved progress and logs are kept.",
-            "Cancel build", "Keep building", "Stops the build at the next safe point. Your source is never changed.",
-            "Cancelling the build", "Waiting for the current operation to finish", "The ISO and build report were saved.", true),
-        OperationKind.Resume => new("resume", "Cancel this resume?",
-            "The resume stops at the next safe point. That can take a few minutes, because the image operation that is running is allowed to finish first. " +
-            "The mounted copy is safely unmounted; working files, saved progress and logs are kept, so you can resume again.",
-            "Cancel resume", "Keep resuming", "Stops the resume at the next safe point. Saved progress is kept.",
-            "Cancelling the resume", "Waiting for the current operation to finish", "The ISO and build report were saved.", true),
-        OperationKind.Download => new("download", "Cancel this download?",
-            "The download stops. The partial file is kept, so you can continue it later. No source media is modified.",
-            "Cancel download", "Keep downloading", "Stops the download. The partial file is kept.",
-            "Cancelling the download", "Stopping the download", "The download finished.", false),
-        OperationKind.Inspect => new("inspection", "Cancel inspecting this image?",
-            "Inspection stops after the current step. The image is not changed.",
-            "Cancel inspection", "Continue", "Stops inspecting the image. Nothing is changed.",
-            "Cancelling the inspection", "Waiting for the current step to finish", "The image was inspected.", false),
-        OperationKind.Inventory => new("component list", "Cancel listing components?",
-            "Listing stops at the next safe point. The read-only mount of the image is discarded and the image is not changed.",
-            "Cancel listing", "Continue", "Stops listing components. The image is not changed.",
-            "Cancelling the component list", "Waiting for the current operation to finish", "The component list was loaded.", true),
-        OperationKind.Recover => new("recovery", "Cancel this recovery?",
-            "Recovery stops at the next safe point. Run Recover workspace again to finish cleaning up this job.",
-            "Cancel recovery", "Keep recovering", "Stops the recovery at the next safe point.",
-            "Cancelling the recovery", "Waiting for the current operation to finish", "The workspace was recovered.", false),
-        OperationKind.Elevate => new("restart", "Cancel the restart?",
-            "The app keeps running without administrator privileges.",
-            "Cancel restart", "Continue", "Stops restarting the app as administrator.",
-            "Cancelling the restart", "Waiting for the current step to finish", "The app was restarted.", false),
-        OperationKind.Check => new("check", "Cancel the check?",
-            "The check stops. Nothing has been changed.",
-            "Cancel check", "Continue", "Stops checking your choices. Nothing is changed.",
-            "Cancelling the check", "Waiting for the current step to finish", "The check finished.", false),
-        _ => new("operation", "Cancel this operation?",
-            "The operation stops after the current step. Nothing has been changed.",
-            "Cancel", "Continue", "Stops the running operation.",
-            "Cancelling", "Waiting for the current step to finish", "The operation finished.", false)
+        OperationKind.Build => new("构建", "取消此构建？",
+            "构建将在下一个安全点停止。可能需要几分钟，因为会先让当前映像操作完成。" +
+            "源文件永不更改。已挂载副本会安全卸载；工作文件、已保存进度与日志均保留。",
+            "取消构建", "继续构建", "在下一个安全点停止构建。源文件永不更改。",
+            "正在取消构建", "等待当前操作完成", "ISO 与构建报告已保存。", true),
+        OperationKind.Resume => new("继续", "取消此次继续？",
+            "继续操作将在下一个安全点停止。可能需要几分钟，因为会先让当前映像操作完成。" +
+            "已挂载副本会安全卸载；工作文件、已保存进度与日志均保留，可再次继续。",
+            "取消继续", "继续构建", "在下一个安全点停止继续。已保存进度已保留。",
+            "正在取消继续", "等待当前操作完成", "ISO 与构建报告已保存。", true),
+        OperationKind.Download => new("下载", "取消此下载？",
+            "下载将停止。部分文件已保留，可稍后继续。未修改源介质。",
+            "取消下载", "继续下载", "停止下载。部分文件已保留。",
+            "正在取消下载", "正在停止下载", "下载已结束。", false),
+        OperationKind.Inspect => new("检查", "取消检查此映像？",
+            "当前步骤完成后停止检查。映像未更改。",
+            "取消检查", "继续", "停止检查映像。未做任何更改。",
+            "正在取消检查", "等待当前步骤完成", "映像已检查。", false),
+        OperationKind.Inventory => new("组件列表", "取消列出组件？",
+            "在下一个安全点停止列出。只读挂载将被丢弃，映像未更改。",
+            "取消列出", "继续", "停止列出组件。映像未更改。",
+            "正在取消组件列表", "等待当前操作完成", "组件列表已加载。", true),
+        OperationKind.Recover => new("恢复", "取消此恢复？",
+            "恢复将在下一个安全点停止。请再次运行「恢复工作区」以完成此作业清理。",
+            "取消恢复", "继续恢复", "在下一个安全点停止恢复。",
+            "正在取消恢复", "等待当前操作完成", "工作区已恢复。", false),
+        OperationKind.Elevate => new("重启", "取消重启？",
+            "应用将在无管理员权限下继续运行。",
+            "取消重启", "继续", "停止以管理员身份重启应用。",
+            "正在取消重启", "等待当前步骤完成", "应用已重启。", false),
+        OperationKind.Check => new("检查", "取消检查？",
+            "检查将停止。未做任何更改。",
+            "取消检查", "继续", "停止检查您的选择。未做任何更改。",
+            "正在取消检查", "等待当前步骤完成", "检查已完成。", false),
+        _ => new("操作", "取消此操作？",
+            "当前步骤完成后停止操作。未做任何更改。",
+            "取消", "继续", "停止正在运行的操作。",
+            "正在取消", "等待当前步骤完成", "操作已结束。", false)
     };
 }
 
@@ -649,52 +649,52 @@ internal sealed class CancellationFlow
 
     // A problem the cancel itself ran into (a callback that failed) is shown while the stop is still running.
     private CancelView Stopping() => new(CancelStage.Cancelling, CancelTone.Neutral, copy.Stopping, "", StatusText(), DetailText(),
-        copy.CleansUp ? "The image tool is never force-stopped, so this can take a few minutes. Do not close the app." :
-            "Do not close the app until this finishes.",
+        copy.CleansUp ? "映像工具不会被强制停止，因此可能需要几分钟。请勿关闭应用。" :
+            "完成前请勿关闭应用。",
         run.Warning, true, true, 0, null, null, false, CancelLink.None, "");
 
     private string StatusText() => phase switch
     {
-        CancelPhase.DiscardingMount => "Discarding the working mount",
-        CancelPhase.SavingLogs => "Saving logs",
-        _ => percentFinished ? "Finishing the current operation" : copy.Waiting
+        CancelPhase.DiscardingMount => "正在丢弃工作挂载",
+        CancelPhase.SavingLogs => "正在保存日志",
+        _ => percentFinished ? "正在完成当前操作" : copy.Waiting
     };
 
     private string DetailText() =>
         phase != CancelPhase.Waiting || current.Length == 0 ? "" :
-        percent is { } value && !percentFinished ? $"Current operation: {current} · {Math.Floor(value):0}%" : $"Current operation: {current}";
+        percent is { } value && !percentFinished ? $"当前操作：{current} · {Math.Floor(value):0}%" : $"当前操作：{current}";
 
     private CancelView Ended(OperationEnd e)
     {
         var tone = e.NeedsAttention ? CancelTone.Error : e.Warning.Length > 0 ? CancelTone.Warning : CancelTone.Done;
-        var title = e.Title.TrimEnd('.');
+        var title = e.Title.TrimEnd('.', '。', ' ');
         string heading, body, status;
         if (e.RecoveryRequired)
         {
-            heading = title + (e.Result == RunResult.Cancelled ? ", but recovery is needed" : ", and recovery is needed");
+            heading = title + (e.Result == RunResult.Cancelled ? "，但需要恢复" : "，且需要恢复");
             (body, status) = (e.Message, "");
         }
         else if (e.Result == RunResult.Succeeded)
         {
-            heading = endedBeforeConfirm ? $"The {copy.Noun} already finished" : "Finished before it could be cancelled";
-            body = copy.Finished + (endedBeforeConfirm ? " It finished before it could be cancelled, so nothing was cancelled." :
-                " The cancellation arrived too late to stop it, so nothing was cancelled.");
-            status = "Finished.";
+            heading = endedBeforeConfirm ? $"{copy.Noun} 已完成" : "在完成取消之前已结束";
+            body = copy.Finished + (endedBeforeConfirm ? " 在完成取消之前已结束，因此未取消任何内容。" :
+                " 取消请求过晚，无法停止，因此未取消任何内容。");
+            status = "已完成。";
         }
         else
         {
             heading = title;
             body = e.Message;
-            status = e.Result == RunResult.Cancelled ? copy.CleansUp ? "Cleanup finished." : "Stopped." : "";
+            status = e.Result == RunResult.Cancelled ? copy.CleansUp ? "清理已完成。" : "已停止。" : "";
         }
         var link = tone != CancelTone.Done && e.WorkDirectory is not null ? CancelLink.OpenLogs :
             tone == CancelTone.Error && e.Details.Length > 0 ? CancelLink.CopyDetails : CancelLink.None;
         // A bar is only ever shown complete for a run that ended cleanly; failures and recovery never wear it.
         var complete = tone != CancelTone.Error;
         return new(CancelStage.Ended, tone, heading, body, complete ? status : "", "",
-            tone != CancelTone.Done && e.WorkDirectory is { } directory ? "Job folder and logs: " + directory : "",
+            tone != CancelTone.Done && e.WorkDirectory is { } directory ? "作业文件夹与日志：" + directory : "",
             e.Warning, complete, false, complete ? 100 : 0, null,
-            tone == CancelTone.Error ? "Close" : "Done", true, link,
-            link == CancelLink.OpenLogs ? "Open logs" : link == CancelLink.CopyDetails ? "Copy details" : "");
+            tone == CancelTone.Error ? "关闭" : "完成", true, link,
+            link == CancelLink.OpenLogs ? "打开日志" : link == CancelLink.CopyDetails ? "复制详细信息" : "");
     }
 }

@@ -74,7 +74,7 @@ public sealed class ImageOperations : IImageOperations
             var directory = Path.Combine(mount, relative);
             if (!Directory.Exists(directory)) continue;
             foreach (var child in Directory.EnumerateDirectories(directory))
-                items.Add(new(kind, Path.GetFileName(child), "Protected payload. Removal can break boot, servicing, security or the shell.", true));
+                items.Add(new(kind, Path.GetFileName(child), "受保护资源包。移除可能破坏启动、维护、安全或 Shell。", true));
         }
         return items;
     }

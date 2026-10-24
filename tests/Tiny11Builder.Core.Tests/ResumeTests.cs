@@ -415,7 +415,7 @@ public sealed class ResumeTests
         var before = JobScenarios.Snapshot(failure.WorkDirectory);
         var refused = await Assert.ThrowsAsync<InvalidDataException>(() =>
             fixture.Engine.ResumeAsync(JobScenarios.JobFile(failure), recipe, null, CancellationToken.None));
-        Assert.Contains("already compressed", refused.Message);
+        Assert.Contains("最终映像已使用", refused.Message);
         Assert.Equal(before, JobScenarios.Snapshot(failure.WorkDirectory));
     }
 
@@ -501,7 +501,7 @@ public sealed class ResumeTests
             Directory.CreateDirectory(Path.Combine(job, JobCheckpoint.FileName));   // a directory now squats on the checkpoint's name
         };
         var failure = await Assert.ThrowsAsync<BuildFailureException>(() => fixture.Engine.BuildAsync(Bypass(fixture), null, CancellationToken.None));
-        Assert.Contains("could not record the Setup image replacement", failure.Message);
+        Assert.Contains("无法记录安装映像替换", failure.Message);
         Assert.Equal(original, File.ReadAllBytes(Path.Combine(failure.WorkDirectory, @"media\sources\boot.wim")));
     }
 
@@ -562,7 +562,7 @@ public sealed class ResumeTests
             var calls = fixture.Runner.Calls.Count;
             var refused = await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Engine.ResumeAsync(
                 JobScenarios.JobFile(failure), JobScenarios.OriginalRecipe(directory), null, CancellationToken.None));
-            Assert.Contains("still mounted", refused.Message);
+            Assert.Contains("仍挂载", refused.Message);
             Assert.DoesNotContain(fixture.Runner.Calls.Skip(calls), JobScenarios.Mutating);
             Assert.Equal(snapshot, JobScenarios.Snapshot(directory));
         }

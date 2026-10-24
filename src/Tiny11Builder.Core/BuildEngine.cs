@@ -57,7 +57,7 @@ public sealed partial class BuildEngine
         var attempted = false;
         try
         {
-            progress?.Report(new("Inventory", "Mounting the image read-only to list its components."));
+            progress?.Report(new("Inventory", "正在以只读方式挂载映像以列出其组件。"));
             var index = recipe.ImageIndex;
             var wim = sourceWim;
             if (Path.GetExtension(sourceWim).Equals(".esd", StringComparison.OrdinalIgnoreCase))
@@ -97,12 +97,12 @@ public sealed partial class BuildEngine
             }
             if (attempted)
             {
-                if (cancelled) Guard(() => progress?.Report(new("Cancel cleanup", "Discarding the read-only working mount",
+                if (cancelled) Guard(() => progress?.Report(new("Cancel cleanup", "正在丢弃只读工作挂载",
                     OperationId: "cancel:mount", State: BuildOperationState.Running)));
                 discardFailure = await TryDiscardAsync(inventoryDism, mount).ConfigureAwait(false);
                 if (discardFailure is not null) secondary.Add(discardFailure);
             }
-            if (cancelled) Guard(() => progress?.Report(new("Cancel cleanup", "Saving logs and stopped-job status",
+            if (cancelled) Guard(() => progress?.Report(new("Cancel cleanup", "正在保存日志与已停止作业状态",
                 OperationId: "cancel:logs", State: BuildOperationState.Running)));
             Guard(() => job.Log(error.Message));
             if (discardFailure is not null) Guard(() => job.Log(DiscardFailureText(discardFailure)));
@@ -122,7 +122,7 @@ public sealed partial class BuildEngine
     {
         var elapsed = Stopwatch.StartNew();
         PathSafety.Validate(recipe);
-        if (string.IsNullOrEmpty(recipe.OscdimgPath)) throw new FileNotFoundException("Windows ADK oscdimg.exe is required to create a bootable ISO.");
+        if (string.IsNullOrEmpty(recipe.OscdimgPath)) throw new FileNotFoundException("创建可启动 ISO 需要 Windows ADK oscdimg.exe。");
         host.ValidateTools(recipe);
         using var media = mediaFactory.Open(recipe.SourcePath);
         var sourceWim = InstallationMedia.ImageFile(media.RootPath);
@@ -137,7 +137,7 @@ public sealed partial class BuildEngine
         host.ValidateImage(recipe, image);
         var efiRelative = new[] { @"efi\microsoft\boot\efisys.bin", @"efi\microsoft\boot\efisys_noprompt.bin" }
             .FirstOrDefault(p => File.Exists(Path.Combine(media.RootPath, p))) ??
-            throw new InvalidDataException("The source does not contain a supported UEFI boot image.");
+            throw new InvalidDataException("源不包含受支持的 UEFI 启动映像。");
         var sourceInstall = new FileInfo(sourceWim);
         using var job = BuildJob.Create(recipe.WorkspacePath, "build", execution.BufferedLog);
         var staging = Path.Combine(job.Directory, "media");
@@ -174,16 +174,16 @@ public sealed partial class BuildEngine
                 ImageItemKind.ProvisionedApp or ImageItemKind.Capability or ImageItemKind.Feature).ToArray();
             foreach (var (name, title) in new[]
             {
-                ("Copy media", "Copy installation media"), ("Export edition", "Export selected edition"),
-                ("Mount", "Mount working image"), ("Inventory", "Validate individual image actions"),
-                ("Custom servicing", "Apply individual servicing actions"), ("Remove apps", "Remove selected apps"),
-                ("Optional features", "Remove optional features and capabilities"),
-                ("Component cleanup", "Clean superseded component files"), (".NET 3.5", "Include .NET Framework 3.5"),
-                ("Windows settings", "Apply Windows settings"), ("Advanced payloads", "Remove selected payload files"),
-                ("Core pruning", "Trim Core component payloads"), ("Redundant data", "Remove redundant offline data"),
-                ("Commit", "Save image changes"),
-                ("Setup image", "Apply Windows Setup settings"), ("Compress", "Compress the final image"),
-                ("Create ISO", "Create bootable ISO"), ("Verify output", "Verify and publish the ISO")
+                ("Copy media", "复制安装介质"), ("Export edition", "导出所选版本"),
+                ("Mount", "挂载工作映像"), ("Inventory", "验证单项映像操作"),
+                ("Custom servicing", "应用单项维护操作"), ("Remove apps", "移除所选应用"),
+                ("Optional features", "移除可选功能与能力"),
+                ("Component cleanup", "清理已被取代的组件文件"), (".NET 3.5", "包含 .NET Framework 3.5"),
+                ("Windows settings", "应用 Windows 设置"), ("Advanced payloads", "移除所选资源包文件"),
+                ("Core pruning", "修剪 Core 组件资源包"), ("Redundant data", "移除离线冗余数据"),
+                ("Commit", "保存映像更改"),
+                ("Setup image", "应用 Windows 安装程序设置"), ("Compress", "压缩最终映像"),
+                ("Create ISO", "创建可启动 ISO"), ("Verify output", "验证并发布 ISO")
             }.Where(entry => entry.Item1 switch
             {
                 "Inventory" => recipe.ExpertActions.Length > 0,
@@ -195,24 +195,24 @@ public sealed partial class BuildEngine
                 "Setup image" => SetupInstaller.RequiresBootEdit(recipe),
                 _ => true
             })) tracking.Plan("stage:" + name, name, title);
-            Log($"Target: {image.Summary}. Source media is never modified.");
-            Log($"Execution: {(recipe.TurboMode ? "Turbo" : "Standard")}; optimized mount={execution.OptimizedMount} " +
-                $"({(!recipe.TurboMode ? "Turbo is off" : !options.AllowOptimizedMount ? "lazy mounting is opt-in and not enabled" : "host opt-in")}); " +
-                $"copy workers={execution.CopyWorkers}; intermediate={workingCompression}.");
-            Log("Policies are verified as offline registry values, not as guarantees of Windows behavior. Build/edition support varies.");
-            if (image.Version.Build > 26100) Log("Newer/Insider builds require matching tools; no boot certification is implied.");
+            Log($"目标：{image.Summary}。源介质永不修改。");
+            Log($"Execution: {(recipe.TurboMode ? "Turbo" : "标准")}; 优化挂载={execution.OptimizedMount} " +
+                $"({(!recipe.TurboMode ? "Turbo 已关闭" : !options.AllowOptimizedMount ? "延迟挂载为可选且未启用" : "主机已启用")}); " +
+                $"复制工作线程={execution.CopyWorkers}; 中间={workingCompression}.");
+            Log("策略以离线注册表值验证，不保证 Windows 行为。构建/版本支持因版本而异。");
+            if (image.Version.Build > 26100) Log("较新/Insider 构建需要匹配的工具；不暗示启动认证。");
             if (recipe.Flavor == BuildFlavor.Core || recipe.ExpertActions.Length > 0)
-                Log("WARNING: Core/expert output may not boot, update, recover, or provide antivirus protection. Test in an isolated VM.");
-            Stage("Copy media", "Copying setup media, excluding the original multi-edition installation image.");
+                Log("警告：Core/专家输出可能无法启动、更新、恢复或提供防病毒保护。请在隔离虚拟机中测试。");
+            Stage("Copy media", "正在复制安装介质（不含原始多版本安装映像）。");
             session.StagingResult = await MediaStager.CopyAsync(media.RootPath, staging, execution.CopyWorkers,
                 recipe.OmitNetFx3SetupPayload, Log, token).ConfigureAwait(false);
-            Stage("Export edition", "Exporting only the selected edition into a writable WIM.");
+            Stage("Export edition", "正在将所选版本导出为可写 WIM。");
             Log(execution.FastWorkingImage ?
-                "Turbo: using fast intermediate compression to accelerate commit. Final compression remains as selected." :
-                $"Intermediate compression: {workingCompression}. Existing WIM compression is retained to avoid recompressing the source.");
+                "Turbo：使用快速中间压缩以加速提交。最终压缩仍按所选方式。" :
+                $"中间压缩：{workingCompression}。保留现有 WIM 压缩以避免重新压缩源。");
             await dism.RunAsync(token, "/Export-Image", $"/SourceImageFile:{sourceWim}", $"/SourceIndex:{recipe.ImageIndex}",
                 $"/DestinationImageFile:{workingWim}", workingCompression, "/CheckIntegrity").ConfigureAwait(false);
-            Stage("Mount", "Mounting the working copy. Cancellation waits for active DISM operations.");
+            Stage("Mount", "正在挂载工作副本。取消将等待当前 DISM 操作完成。");
             session.Mounted = true;
             try
             {
@@ -222,8 +222,8 @@ public sealed partial class BuildEngine
             catch (DismCommandException error) when (execution.OptimizedMount && error.ExitCode == 87 &&
                 Regex.IsMatch(error.Output, @"optimize\s+option\s+is\s+unknown", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             {
-                tracking.Skip("mount:lazy-check", "Mount", "Validate optimized mount",
-                    "This servicing tool does not support optimized mounting. Retrying normally with integrity checks.");
+                tracking.Skip("mount:lazy-check", "Mount", "验证优化挂载",
+                    "此维护工具不支持优化挂载。正在以完整性检查正常重试。");
                 await DiscardMountAsync(dism, mount).ConfigureAwait(false);
                 session.Mounted = false;
                 token.ThrowIfCancellationRequested();
@@ -242,15 +242,15 @@ public sealed partial class BuildEngine
                 }
                 catch (DismCommandException error) when (error.ExitCode == 4350)
                 {
-                    tracking.Skip("mount:lazy-check", "Mount", "Validate optimized mount",
-                        "This host rejected lazy image access (DISM 4350). Retrying a normal mount before any image changes.");
+                    tracking.Skip("mount:lazy-check", "Mount", "验证优化挂载",
+                        "此主机拒绝了延迟映像访问（DISM 4350）。在进行任何映像更改前正在正常重试挂载。");
                     await dism.RunAsync(CancellationToken.None, "/Unmount-Image", $"/MountDir:{mount}", "/Discard").ConfigureAwait(false);
                     session.Mounted = false;
                     token.ThrowIfCancellationRequested();
                     dism.DisableOptimizedMount();
                     session.UsedOptimizedMount = false;
                     MountOptimizationCache.TryRecordUnavailable(recipe.WorkspacePath, recipe.DismPath, error.ExitCode, session.Warn);
-                    await tracking.RunAsync("mount:normal-retry", "Mount", "Lazy mounting unavailable; mount normally with integrity checks",
+                    await tracking.RunAsync("mount:normal-retry", "Mount", "延迟挂载不可用；以完整性检查正常挂载",
                         async () =>
                         {
                             session.Mounted = true;
@@ -263,15 +263,15 @@ public sealed partial class BuildEngine
             IReadOnlyList<ImageInventoryItem> inventory = [];
             if (recipe.ExpertActions.Length > 0)
             {
-                Stage("Inventory", "Revalidating expert actions against the actual mounted image.");
+                Stage("Inventory", "正在根据实际挂载映像重新验证专家操作。");
                 inventory = await ImageInventory.ReadAsync(dism, imageOperations, mount, token).ConfigureAwait(false);
                 ImageInventory.ValidateActions(recipe.ExpertActions, inventory);
             }
             if (servicingActions.Length > 0)
             {
-                Stage("Custom servicing", "Applying selected package, app, capability and feature actions.");
+                Stage("Custom servicing", "正在应用所选程序包、应用、能力与功能操作。");
                 foreach (var action in servicingActions)
-                    tracking.Plan($"expert:{action.Kind}:{action.Identity}", "Custom servicing", $"{action.Mode} {action.Kind}: {action.Identity}");
+                    tracking.Plan($"expert:{action.Kind}:{action.Identity}", "Custom servicing", $"{action.Mode} {action.Kind}：{action.Identity}");
                 foreach (var action in servicingActions)
                 {
                     if (action.Kind == ImageItemKind.Capability)
@@ -280,26 +280,26 @@ public sealed partial class BuildEngine
                         continue;
                     }
                     await tracking.RunAsync($"expert:{action.Kind}:{action.Identity}", "Custom servicing",
-                        $"{action.Mode} {action.Kind}: {action.Identity}",
+                        $"{action.Mode} {action.Kind}：{action.Identity}",
                         () => ApplyDismActionAsync(dism, mount, action, token)).ConfigureAwait(false);
                 }
             }
-            Stage("Remove apps", "Removing selected provisioned apps by exact identity.");
+            Stage("Remove apps", "正在按确切标识移除所选预配应用。");
             var appOptions = CleanupCatalog.Options.Where(o => o.Kind == OptionKind.App && recipe.SelectedOptions.Contains(o.Id)).ToArray();
             IReadOnlyList<ProvisionedApp> apps = appOptions.Length > 0 ?
                 DismClient.ParseApps(await dism.RunAsync(token, $"/Image:{mount}", "/Get-ProvisionedAppxPackages").ConfigureAwait(false)) : [];
             var appsToRemove = apps.Where(app => appOptions.Any(option => CleanupCatalog.MatchesApp(option, app)))
                 .DistinctBy(app => app.PackageName).ToArray();
-            foreach (var app in appsToRemove) tracking.Plan("app:" + app.PackageName, "Remove apps", $"Remove {app.DisplayName} ({app.PackageName})");
+            foreach (var app in appsToRemove) tracking.Plan("app:" + app.PackageName, "Remove apps", $"移除 {app.DisplayName} ({app.PackageName})");
             foreach (var option in appOptions)
             {
                 var matching = apps.Where(a => CleanupCatalog.MatchesApp(option, a)).ToArray();
                 if (matching.Length == 0) tracking.Skip("missing-app:" + option.Id, "Remove apps", option.Title, "Not present in this image");
             }
             foreach (var app in appsToRemove)
-                await tracking.RunAsync("app:" + app.PackageName, "Remove apps", $"Remove {app.DisplayName} ({app.PackageName})",
+                await tracking.RunAsync("app:" + app.PackageName, "Remove apps", $"移除 {app.DisplayName} ({app.PackageName})",
                     () => dism.RunAsync(token, $"/Image:{mount}", "/Remove-ProvisionedAppxPackage", $"/PackageName:{app.PackageName}")).ConfigureAwait(false);
-            Stage("Optional features", "Detecting actual features and capabilities; unavailable choices are reported, not guessed.");
+            Stage("Optional features", "正在检测实际功能与能力；不可用的选择会报告，不会猜测。");
             var featureOptions = CleanupCatalog.Options.Where(o => o.Kind == OptionKind.Feature && recipe.SelectedOptions.Contains(o.Id)).ToArray();
             var capabilityOptions = CleanupCatalog.Options.Where(o => o.Kind == OptionKind.Capability && recipe.SelectedOptions.Contains(o.Id)).ToArray();
             IReadOnlyDictionary<string, string> features = featureOptions.Length > 0 ?
@@ -325,9 +325,9 @@ public sealed partial class BuildEngine
                     () => Sentence(outcome.Describe())).ConfigureAwait(false);
                 RecordCapabilities(session, [outcome]);
             }
-            foreach (var name in featureNames) tracking.Plan("feature:" + name, "Optional features", $"Remove optional feature: {name}");
+            foreach (var name in featureNames) tracking.Plan("feature:" + name, "Optional features", $"移除可选功能：{name}");
             foreach (var capability in removalCapabilities)
-                tracking.Plan("capability:" + capability.Identity, "Optional features", $"Request capability removal: {capability.Identity}");
+                tracking.Plan("capability:" + capability.Identity, "Optional features", $"请求移除能力：{capability.Identity}");
             foreach (var option in featureOptions)
             {
                 var matching = option.Targets.Where(features.ContainsKey).ToArray();
@@ -375,13 +375,13 @@ public sealed partial class BuildEngine
             }
             if (recipe.EnableNetFx3)
             {
-                Stage(".NET 3.5", "Enabling .NET 3.5 from matching source media, without Windows Update.");
+                Stage(".NET 3.5", "正在从匹配源介质启用 .NET 3.5（不使用 Windows 更新）。");
                 var sxs = Path.Combine(media.RootPath, @"sources\sxs");
                 if (!Directory.Exists(sxs)) throw new DirectoryNotFoundException("The source has no sources\\sxs payload for .NET 3.5.");
                 await dism.RunAsync(token, $"/Image:{mount}", "/Enable-Feature", "/FeatureName:NetFx3", "/All",
                     "/LimitAccess", $"/Source:{sxs}", "/NoRestart").ConfigureAwait(false);
             }
-            Stage("Windows settings", "Applying selected registry settings to the offline image.");
+            Stage("Windows settings", "正在将所选注册表设置应用到离线映像。");
             await tracking.RunAsync("registry:settings", "Windows settings", "Apply and verify offline Windows settings",
                 () =>
                 {
@@ -389,23 +389,23 @@ public sealed partial class BuildEngine
                     return Task.CompletedTask;
                 }).ConfigureAwait(false);
             File.WriteAllText(Path.Combine(staging, "autounattend.xml"), UnattendBuilder.Create(image, recipe));
-            Stage("Advanced payloads", "Applying original-builder and expert payload removals to the offline copy only.");
+            Stage("Advanced payloads", "正在仅对离线副本应用原版构建器与专家资源包移除。");
             if (RemovesComponentPayloads(recipe)) await EnsureNoPendingOperationsAsync(session, token).ConfigureAwait(false);
             imageOperations.RemoveOriginalFiles(mount, image.Architecture, OriginalFileOptions(session), Log, recipe.TurboMode);
             if (recipe.Flavor == BuildFlavor.Core)
             {
-                Stage("Core pruning", "Trimming Core component payloads and recovery files.");
+                Stage("Core pruning", "正在修剪 Core 组件资源包与恢复文件。");
                 imageOperations.TrimCore(mount, image.Architecture, Log, token, recipe.TurboMode);
             }
             imageOperations.ApplyNativeActions(mount, recipe.ExpertActions, Log, recipe.TurboMode);
             if (recipe.RemoveRedundantData)
             {
-                Stage("Redundant data", "Removing offline cache, archived logs and crash reports.");
+                Stage("Redundant data", "正在移除离线缓存、归档日志与崩溃报告。");
                 session.Cleanup = imageOperations.CleanRedundantData(mount, Log, token);
                 foreach (var item in session.Cleanup.Where(item => item.State == BuildOperationState.Skipped))
                     tracking.Skip("cleanup:" + item.Path, "Redundant data", $"Clean {item.Path}", item.Detail);
             }
-            Stage("Commit", "Committing the modified working image.");
+            Stage("Commit", "正在提交已修改的工作映像。");
             await dism.RunAsync(token, "/Unmount-Image", $"/MountDir:{mount}", "/Commit", "/CheckIntegrity").ConfigureAwait(false);
             session.Mounted = false;
             // The checkpoint is durable before any later stage can observe a cancellation request.
@@ -437,10 +437,10 @@ public sealed partial class BuildEngine
         PathSafety.RejectReparsePoints(jobFile);
         if (Path.GetFileName(jobFile) != "job.json" || !leaf.StartsWith("tiny11-", StringComparison.Ordinal) ||
             !Guid.TryParseExact(leaf[7..], "N", out _))
-            throw new InvalidDataException("Select job.json inside a tiny11-owned job directory.");
+            throw new InvalidDataException("请在 tiny11 作业目录内选择 job.json。");
         var state = JsonSerializer.Deserialize<JobState>(File.ReadAllText(jobFile), JsonDefaults.Options)
-            ?? throw new InvalidDataException("Invalid job marker.");
-        if (state.Id != leaf[7..] || state.Status == "completed") throw new InvalidDataException("This is not an interrupted job.");
+            ?? throw new InvalidDataException("无效的作业标记。");
+        if (state.Id != leaf[7..] || state.Status == "completed") throw new InvalidDataException("这不是中断的作业。");
         PathSafety.RejectReparsePoints(Path.Combine(directory, "job.lock"));
         // An active build holds this lock, including across separate app instances.
         using var jobLock = new FileStream(Path.Combine(directory, "job.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -449,8 +449,8 @@ public sealed partial class BuildEngine
         PathSafety.RejectReparsePoints(checkpointFile);
         var checkpointed = File.Exists(checkpointFile);
         if (checkpointed && !discardCommitted)
-            throw new CheckpointedJobException("This job holds verified saved progress (a committed Windows image and its staged setup files). " +
-                "Use Resume to finish it without repeating that work. Recovery would permanently delete the saved image, so it needs explicit confirmation.");
+            throw new CheckpointedJobException("此作业持有已验证的已保存进度（已提交的 Windows 映像及其暂存安装文件）。 " +
+                "请使用「继续构建」完成，无需重复已完成的工作。恢复将永久删除已保存映像，需明确确认。");
         if (OperatingSystem.IsWindows()) OfflineHive.RecoverJob(directory);
         var mount = Path.Combine(directory, "mount");
         var dism = new DismClient(dismPath, runner);
@@ -475,7 +475,7 @@ public sealed partial class BuildEngine
             ImageItemKind.Feature => action.Mode == ExpertActionMode.Remove ?
                 ["/Disable-Feature", $"/FeatureName:{action.Identity}", "/Remove", "/NoRestart"] :
                 ["/Disable-Feature", $"/FeatureName:{action.Identity}", "/NoRestart"],
-            _ => throw new InvalidDataException("Not a DISM action.")
+            _ => throw new InvalidDataException("不是 DISM 操作。")
         };
         await dism.RunAsync(token, [$"/Image:{mount}", .. args]).ConfigureAwait(false);
     }
