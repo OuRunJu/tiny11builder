@@ -619,7 +619,7 @@ public sealed class AppFlowTests
             new("Compress", "Compress the final image", percent, "stage:Compress", state);
         flow.Observe(Event(null, BuildOperationState.Running));
         flow.Observe(Event(42.7));
-        Assert.Equal("Current operation: Compress the final image · 42%", flow.View.Detail);
+        Assert.Equal("当前操作：Compress the final image · 42%", flow.View.Detail);
         Assert.True(flow.View.Indeterminate);   // the bar is a wait; the percentage is only text
         Assert.Equal(0, flow.View.Percent);
         flow.Observe(Event(-5));
@@ -628,14 +628,14 @@ public sealed class AppFlowTests
         flow.Observe(Event(double.PositiveInfinity));
         Assert.EndsWith("· 0%", flow.View.Detail);   // not percentages: ignored
         flow.Observe(Event(250));   // clamped to 100, which means that operation is done
-        Assert.Equal("Finishing the current operation", flow.View.Status);
-        Assert.Equal("Current operation: Compress the final image", flow.View.Detail);
+        Assert.Equal("正在完成当前操作", flow.View.Status);
+        Assert.Equal("当前操作：Compress the final image", flow.View.Detail);
         flow.Observe(Event(30));   // a later percentage (the discard of a mount, say) belongs to something with no name here
-        Assert.Equal("Finishing the current operation", flow.View.Status);
+        Assert.Equal("正在完成当前操作", flow.View.Status);
         Assert.DoesNotContain("%", flow.View.Detail);
         flow.Observe(new("Create ISO", "Create bootable ISO", null, "stage:Create ISO", BuildOperationState.Running));
         Assert.Equal("等待当前操作完成", flow.View.Status);   // a new operation starts the wait again
-        Assert.Equal("Current operation: Create bootable ISO", flow.View.Detail);
+        Assert.Equal("当前操作：Create bootable ISO", flow.View.Detail);
         flow.Observe(new("Create ISO", "A console line", 10));   // no operation id: not an operation's progress
         Assert.DoesNotContain("%", flow.View.Detail);
     }
@@ -666,18 +666,18 @@ public sealed class AppFlowTests
         flow.Confirm();
         Assert.Equal("等待当前操作完成", flow.View.Status);   // before the cancel was sent: ignored
         flow.Observe(Mount());
-        Assert.Equal("Discarding the working mount", flow.View.Status);
+        Assert.Equal("正在丢弃工作挂载", flow.View.Status);
         flow.Observe(Logs());
-        Assert.Equal("Saving logs", flow.View.Status);
+        Assert.Equal("正在保存日志", flow.View.Status);
         flow.Observe(Mount());
-        Assert.Equal("Saving logs", flow.View.Status);   // never back
+        Assert.Equal("正在保存日志", flow.View.Status);   // never back
         Assert.Equal("", flow.View.Detail);   // the operation that was running is long over
 
         // With nothing mounted Core sends only the second event, and the wait jumps straight to it.
         var unmounted = Begin(new OperationRun(OperationKind.Build));
         unmounted.Confirm();
         unmounted.Observe(Logs());
-        Assert.Equal("Saving logs", unmounted.View.Status);
+        Assert.Equal("正在保存日志", unmounted.View.Status);
     }
 
     [Fact]
@@ -686,14 +686,14 @@ public sealed class AppFlowTests
         var run = new OperationRun(OperationKind.Download);
         var flow = Begin(run);
         Assert.Equal("取消此下载？", flow.View.Title);
-        Assert.Contains("partial file is kept", flow.View.Body);
+        Assert.Contains("部分文件已保留", flow.View.Body);
         Assert.Equal("继续下载", flow.View.CloseText);
         flow.Confirm();
         Assert.Equal("正在取消下载", flow.View.Title);
-        Assert.Equal("Stopping the download", flow.View.Status);
-        Assert.Equal("Do not close the app until this finishes.", flow.View.Footnote);
+        Assert.Equal("正在停止下载", flow.View.Status);
+        Assert.Equal("完成前请勿关闭应用。", flow.View.Footnote);
         flow.Observe(new(CancelCleanup.Stage, "Discarding the working mount", OperationId: CancelCleanup.MountOperation, State: BuildOperationState.Running));
-        Assert.Equal("Stopping the download", flow.View.Status);   // a download has no mount to discard
+        Assert.Equal("正在停止下载", flow.View.Status);   // a download has no mount to discard
 
         run.Record(Classified(OperationKind.Download, new OperationCanceledException()));
         run.Settle();
