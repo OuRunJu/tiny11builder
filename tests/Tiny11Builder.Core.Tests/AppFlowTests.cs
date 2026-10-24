@@ -271,9 +271,9 @@ public sealed class AppFlowTests
         var flow = Begin(run);
         var asking = flow.View;
         Assert.Equal(CancelStage.Confirming, asking.Stage);
-        Assert.Equal("Cancel this build?", asking.Title);
-        Assert.Equal("Cancel build", asking.ConfirmText);   // the critical action ...
-        Assert.Equal("Keep building", asking.CloseText);   // ... and the safe answer
+        Assert.Equal("取消此构建？", asking.Title);
+        Assert.Equal("取消构建", asking.ConfirmText);   // the critical action ...
+        Assert.Equal("继续构建", asking.CloseText);   // ... and the safe answer
         Assert.True(asking.CanClose);
         Assert.False(asking.ShowProgress);
         flow.Observe(new("Compress", "Compress the final image", 12, "stage:Compress"));
@@ -284,9 +284,9 @@ public sealed class AppFlowTests
         Assert.True(run.Token.IsCancellationRequested);
         var stopping = flow.View;
         Assert.Equal(CancelStage.Cancelling, stopping.Stage);
-        Assert.Equal("Cancelling the build", stopping.Title);
-        Assert.Equal("Waiting for the current operation to finish", stopping.Status);
-        Assert.Equal("Current operation: Compress the final image · 12%", stopping.Detail);   // seen while it was still asking
+        Assert.Equal("正在取消构建", stopping.Title);
+        Assert.Equal("等待当前操作完成", stopping.Status);
+        Assert.Equal("当前操作：Compress the final image · 12%", stopping.Detail);   // seen while it was still asking
         Assert.True(stopping.ShowProgress);
         Assert.True(stopping.Indeterminate);   // a wait, not a percentage of the shutdown
         Assert.Null(stopping.ConfirmText);
@@ -634,7 +634,7 @@ public sealed class AppFlowTests
         Assert.Equal("Finishing the current operation", flow.View.Status);
         Assert.DoesNotContain("%", flow.View.Detail);
         flow.Observe(new("Create ISO", "Create bootable ISO", null, "stage:Create ISO", BuildOperationState.Running));
-        Assert.Equal("Waiting for the current operation to finish", flow.View.Status);   // a new operation starts the wait again
+        Assert.Equal("等待当前操作完成", flow.View.Status);   // a new operation starts the wait again
         Assert.Equal("Current operation: Create bootable ISO", flow.View.Detail);
         flow.Observe(new("Create ISO", "A console line", 10));   // no operation id: not an operation's progress
         Assert.DoesNotContain("%", flow.View.Detail);
@@ -664,7 +664,7 @@ public sealed class AppFlowTests
         var flow = Begin(run);
         flow.Observe(Mount());
         flow.Confirm();
-        Assert.Equal("Waiting for the current operation to finish", flow.View.Status);   // before the cancel was sent: ignored
+        Assert.Equal("等待当前操作完成", flow.View.Status);   // before the cancel was sent: ignored
         flow.Observe(Mount());
         Assert.Equal("Discarding the working mount", flow.View.Status);
         flow.Observe(Logs());
@@ -685,11 +685,11 @@ public sealed class AppFlowTests
     {
         var run = new OperationRun(OperationKind.Download);
         var flow = Begin(run);
-        Assert.Equal("Cancel this download?", flow.View.Title);
+        Assert.Equal("取消此下载？", flow.View.Title);
         Assert.Contains("partial file is kept", flow.View.Body);
-        Assert.Equal("Keep downloading", flow.View.CloseText);
+        Assert.Equal("继续下载", flow.View.CloseText);
         flow.Confirm();
-        Assert.Equal("Cancelling the download", flow.View.Title);
+        Assert.Equal("正在取消下载", flow.View.Title);
         Assert.Equal("Stopping the download", flow.View.Status);
         Assert.Equal("Do not close the app until this finishes.", flow.View.Footnote);
         flow.Observe(new(CancelCleanup.Stage, "Discarding the working mount", OperationId: CancelCleanup.MountOperation, State: BuildOperationState.Running));
