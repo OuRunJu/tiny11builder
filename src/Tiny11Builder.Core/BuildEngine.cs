@@ -450,7 +450,7 @@ public sealed partial class BuildEngine
         var checkpointed = File.Exists(checkpointFile);
         if (checkpointed && !discardCommitted)
             throw new CheckpointedJobException("此作业持有已验证的已保存进度（已提交的 Windows 映像及其暂存安装文件）。 " +
-                "Use Resume to finish it without repeating that work. Recovery would permanently delete the saved image, so it needs explicit confirmation.");
+                "请使用「继续构建」完成，无需重复已完成的工作。恢复将永久删除已保存映像，需明确确认。");
         if (OperatingSystem.IsWindows()) OfflineHive.RecoverJob(directory);
         var mount = Path.Combine(directory, "mount");
         var dism = new DismClient(dismPath, runner);

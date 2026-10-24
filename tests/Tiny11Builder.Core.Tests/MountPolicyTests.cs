@@ -34,7 +34,7 @@ public sealed class MountPolicyTests
         using var report = JsonDocument.Parse(File.ReadAllText(result.ReportPath));
         Assert.False(report.RootElement.GetProperty("UsedOptimizedMount").GetBoolean());
         Assert.False(report.RootElement.GetProperty("Execution").GetProperty("OptimizedMount").GetBoolean());
-        Assert.Contains("lazy mounting is opt-in and not enabled", File.ReadAllText(Path.Combine(result.WorkDirectory, "build.log")));
+        Assert.Contains("延迟挂载为可选且未启用", File.ReadAllText(Path.Combine(result.WorkDirectory, "build.log")));
         Assert.Empty(result.Warnings);
     }
 

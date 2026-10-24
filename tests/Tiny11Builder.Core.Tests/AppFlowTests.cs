@@ -108,7 +108,7 @@ public sealed class AppFlowTests
 
         var nested = new InvalidOperationException("outer", new IOException("inner cause")).ToString();
         Assert.Equal("outer", ErrorText.Summary(nested));
-        Assert.Equal("功能移除被拒绝", ErrorText.Summary(new IOException("Feature removal refused").ToString()));
+        Assert.Equal("Feature removal refused", ErrorText.Summary(new IOException("Feature removal refused").ToString()));
     }
 
     [Fact]

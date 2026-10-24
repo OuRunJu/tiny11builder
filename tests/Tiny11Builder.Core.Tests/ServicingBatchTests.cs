@@ -111,14 +111,14 @@ public sealed class CapabilityBatchTests
             new ImmediateProgress<BuildProgress>(events.Add), CancellationToken.None);
         Assert.Single(fixture.Runner.Calls, call => call.Contains("/Remove-Capability"));
         Assert.All(Three, id => Assert.Contains(events, item => item.OperationId == "capability:" + id &&
-            item.State == BuildOperationState.Completed && item.Detail!.Contains("shared by the whole batch") &&
+            item.State == BuildOperationState.Completed && item.Detail!.Contains("整批共享") &&
             item.Detail.Contains("Verified absent")));
         using var operations = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.WorkDirectory, "operations.json")));
         Assert.Equal(3, operations.RootElement.EnumerateArray().Count(item =>
             item.GetProperty("Id").GetString()!.StartsWith("capability:", StringComparison.Ordinal)));
         using var report = JsonDocument.Parse(File.ReadAllText(result.ReportPath));
         Assert.Equal(3, report.RootElement.GetProperty("Capabilities").GetArrayLength());
-        Assert.Contains("optimized mount=False", File.ReadAllText(Path.Combine(result.WorkDirectory, "build.log")));
+        Assert.Contains("优化挂载=False", File.ReadAllText(Path.Combine(result.WorkDirectory, "build.log")));
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public sealed class FeatureStateTests
             var completed = events.Last(item => item.OperationId == id);
             Assert.Equal(BuildOperationState.Completed, completed.State);
             Assert.Contains(wording, completed.Detail, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("shared by the whole batch", completed.Detail);
+            Assert.Contains("整批共享", completed.Detail);
             if (outcome != "PayloadRemoved") Assert.DoesNotContain("payload removed", completed.Detail, StringComparison.OrdinalIgnoreCase);
         }
         using var report = JsonDocument.Parse(File.ReadAllText(result.ReportPath));

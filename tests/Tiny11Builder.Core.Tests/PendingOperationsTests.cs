@@ -227,7 +227,7 @@ public sealed class PendingOperationsTests
         Assert.Equal([BuildOperationState.Pending, BuildOperationState.Skipped], StateTrail(events, "retained:edge-files"));
         Assert.Equal(reason, events.Last(e => e.OperationId == "retained:edge-files").Detail);
         var log = File.ReadAllText(Path.Combine(result.WorkDirectory, "build.log"));
-        Assert.Contains("Remove Edge and WebView2: " + reason, log);
+        Assert.Contains("移除 Edge 与 WebView2: " + reason, log);
         using var operationsJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(result.WorkDirectory, "operations.json")));
         var kept = Operation(operationsJson, "retained:edge-files");
         Assert.Equal("Skipped", kept.GetProperty("State").GetString());
@@ -466,7 +466,7 @@ public sealed class PendingOperationsTests
         Assert.Equal(BuildOperationState.Skipped, timing.State);
         Assert.NotNull(timing.Milliseconds);
         Assert.Contains("Clean superseded component files: Pending operations.", log);
-        Assert.DoesNotContain(log, line => line.StartsWith("Completed stage", StringComparison.Ordinal));
+        Assert.DoesNotContain(log, line => line.StartsWith("已完成阶段", StringComparison.Ordinal));
     }
 
     [Fact]

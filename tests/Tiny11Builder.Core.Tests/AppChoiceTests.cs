@@ -62,14 +62,14 @@ public sealed class AppChoiceTests
         var servicing = run.Board.Stages[2];
         var failedRows = servicing.Operations.Where(o => o.State == BuildOperationState.Failed).ToArray();
         Assert.Equal(2, failedRows.Length);   // the item and its stage both failed ...
-        Assert.StartsWith("Failed: ", servicing.Status);   // ... but the page reports one failure, naming the item
+        Assert.StartsWith("失败：", servicing.Status);   // ... but the page reports one failure, naming the item
         Assert.Contains("Protected-Package", servicing.Status);
-        Assert.DoesNotContain("2 failed", servicing.Status);
-        Assert.Contains("not run", servicing.Status);
-        Assert.DoesNotContain(" next", servicing.Status);
-        Assert.All(servicing.Operations.Where(o => o.State == BuildOperationState.Pending), o => Assert.Equal("Not run", o.Status));
-        Assert.Equal("Not run", run.Board.Stages[6].Status);
-        Assert.Equal("Not run", run.Board.Stages[5].Status);
+        Assert.DoesNotContain("2 项失败", servicing.Status);
+        Assert.Contains("未运行", servicing.Status);
+        Assert.DoesNotContain("待处理", servicing.Status);
+        Assert.All(servicing.Operations.Where(o => o.State == BuildOperationState.Pending), o => Assert.Equal("未运行", o.Status));
+        Assert.Equal("未运行", run.Board.Stages[6].Status);
+        Assert.Equal("未运行", run.Board.Stages[5].Status);
     }
 
     [Fact]
@@ -80,9 +80,9 @@ public sealed class AppChoiceTests
         var run = await RunAsync(fixture, fixture.Recipe);
         Assert.IsType<BuildFailureException>(run.Error);
         run.Board.Stop(cancelled: false);
-        Assert.StartsWith("Failed: Create bootable ISO", run.Board.Stages[5].Status);
+        Assert.StartsWith("失败：创建可启动 ISO", run.Board.Stages[5].Status);
         Assert.Equal("完成", run.Board.Stages[4].Status);
-        Assert.Equal("Not run", run.Board.Stages[6].Status);
+        Assert.Equal("未运行", run.Board.Stages[6].Status);
     }
 
     [Fact]
@@ -97,12 +97,12 @@ public sealed class AppChoiceTests
         run.Board.Stop(cancelled: true);
         // The mount had finished when the cancel was seen, so it is complete rather than relabelled as cancelled.
         Assert.Equal("完成", run.Board.Stages[1].Status);
-        Assert.Equal("Not run", run.Board.Stages[2].Status);
+        Assert.Equal("未运行", run.Board.Stages[2].Status);
         Assert.DoesNotContain(run.Board.Stages.SelectMany(s => s.Operations), o => o.State == BuildOperationState.Failed);
         Assert.DoesNotContain(run.Board.Stages.SelectMany(s => s.Operations), o => o.State == BuildOperationState.Running);
         Assert.All(run.Board.Stages.SelectMany(s => s.Operations).Where(o => o.State == BuildOperationState.Pending),
             o => Assert.True(o.NotRun));
-        Assert.Equal("Not run", run.Board.Stages[5].Status);
+        Assert.Equal("未运行", run.Board.Stages[5].Status);
     }
 
     [Fact]
@@ -119,8 +119,8 @@ public sealed class AppChoiceTests
         Assert.Equal(2, features.Length);
         Assert.Single(features, o => o.State == BuildOperationState.Completed);
         Assert.Single(features, o => o.State == BuildOperationState.Cancelled);
-        Assert.StartsWith("Cancelled", servicing.Status);   // the item and its stage were both cancelled, but it is one cancellation
-        Assert.Contains("not run", servicing.Status);
+        Assert.StartsWith("已取消", servicing.Status);   // the item and its stage were both cancelled, but it is one cancellation
+        Assert.Contains("未运行", servicing.Status);
         Assert.DoesNotContain("failed", servicing.Status);
         Assert.DoesNotContain(run.Board.Stages.SelectMany(s => s.Operations), o => o.State == BuildOperationState.Failed);
     }
@@ -164,7 +164,7 @@ public sealed class AppChoiceTests
             board.Apply(new("Remove apps", "Remove " + app, OperationId: "app:" + app, State: BuildOperationState.Pending));
         board.Apply(new("Remove apps", "Remove A", OperationId: "app:A", State: BuildOperationState.Completed));
         // 1 done; next = app B plus the still-empty "Optional features" stage. The running stage row is not a unit.
-        Assert.Equal("In progress · 1 done · 2 next", board.Stages[2].Status);
+        Assert.Equal("进行中 · 1 项完成 · 2 项待处理", board.Stages[2].Status);
         Assert.Equal(["stage:Remove apps", "app:A", "app:B", "stage:Optional features"], Ids(board.Stages[2]));
     }
 
@@ -180,7 +180,7 @@ public sealed class AppChoiceTests
                 State: BuildOperationState.Failed, Detail: "Feature batch failed."));
         }
         board.Apply(new("Optional features", "Remove optional features", OperationId: "stage:Optional features", State: BuildOperationState.Failed));
-        Assert.StartsWith("2 failed", board.Stages[2].Status);
+        Assert.StartsWith("2 项失败", board.Stages[2].Status);
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public sealed class AppChoiceTests
         var outcome = OperationOutcomes.Classify(OperationKind.Recover, refusal);
         Assert.False(outcome.Cancelled);
         Assert.Equal("恢复未完成。", outcome.Title);
-        Assert.Contains("Resume", outcome.Message);
+        Assert.Contains("继续构建", outcome.Message);
         Assert.True(Directory.Exists(Path.Combine(stopped.WorkDirectory, "media")));   // nothing was discarded
     }
 

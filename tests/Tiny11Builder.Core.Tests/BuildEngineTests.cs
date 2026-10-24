@@ -160,7 +160,7 @@ public sealed class BuildEngineTests
         // The failed ISO step leaves verified saved progress, so Recovery refuses until discarding it is explicit.
         var refused = await Assert.ThrowsAsync<CheckpointedJobException>(() =>
             fixture.Engine.RecoverAsync(marker, fixture.Recipe.DismPath, CancellationToken.None));
-        Assert.Contains("Resume", refused.Message);
+        Assert.Contains("继续构建", refused.Message);
         Assert.True(Directory.Exists(Path.Combine(failure.WorkDirectory, "media")));
         Assert.True(File.Exists(Path.Combine(failure.WorkDirectory, JobCheckpoint.FileName)));
         await fixture.Engine.RecoverAsync(marker, fixture.Recipe.DismPath, CancellationToken.None, discardCommitted: true);

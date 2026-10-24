@@ -58,7 +58,7 @@ public sealed class ResumeRefusalTests
         using var fixture = new BuildFixture();
         var job = await JobScenarios.InterruptAtCommitAsync(fixture);
         File.AppendAllText(Path.Combine(job.WorkDirectory, "working.wim"), "x");
-        await AssertRefusedAsync(fixture, job, "different size");
+        await AssertRefusedAsync(fixture, job, "大小与提交时不一致");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class ResumeRefusalTests
         var engine = new BuildEngine(other.Runner, new FakeMediaFactory(), other.Registry, other.Operations, new FakeHost());
         var refused = await Assert.ThrowsAsync<InvalidDataException>(() => engine.ResumeAsync(
             JobScenarios.JobFile(job), JobScenarios.OriginalRecipe(job.WorkDirectory), null, CancellationToken.None));
-        Assert.Contains("different Windows image", refused.Message);
+        Assert.Contains("不同的 Windows 映像", refused.Message);
         Assert.DoesNotContain(other.Runner.Calls, JobScenarios.Mutating);
     }
 
@@ -180,7 +180,7 @@ public sealed class ResumeRefusalTests
         using var fixture = new BuildFixture();
         var job = await JobScenarios.InterruptAtCommitAsync(fixture);
         File.AppendAllText(Path.Combine(job.WorkDirectory, "recipe.json"), " ");
-        await AssertRefusedAsync(fixture, job, "original recipe changed");
+        await AssertRefusedAsync(fixture, job, "原始方案已更改");
     }
 
     [Theory]
@@ -212,7 +212,7 @@ public sealed class ResumeRefusalTests
             "OmitNetFx3SetupPayload" => original with { OmitNetFx3SetupPayload = true },
             _ => original with { CompactInstallation = !original.CompactInstallation }
         };
-        var refused = await AssertRefusedAsync(fixture, job, "frozen", changed);
+        var refused = await AssertRefusedAsync(fixture, job, "冻结", changed);
         Assert.Contains(field, refused.Message);
     }
 
@@ -310,7 +310,7 @@ public sealed class ResumeRefusalTests
         var moved = JobScenarios.OriginalRecipe(job.WorkDirectory) with { WorkspacePath = Path.Combine(fixture.Root, "another-workspace") };
         File.WriteAllText(file, JsonSerializer.Serialize(moved, JsonDefaults.Options));
         Rewrite(job.WorkDirectory, saved => saved with { RecipeSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))) });
-        await AssertRefusedAsync(fixture, job, "workspace", moved);
+        await AssertRefusedAsync(fixture, job, "工作区", moved);
     }
 
     [Fact]
@@ -319,7 +319,7 @@ public sealed class ResumeRefusalTests
         using var fixture = new BuildFixture();
         var job = await JobScenarios.InterruptAtCommitAsync(fixture, Bypass(fixture));
         Rewrite(job.WorkDirectory, saved => saved with { SetupState = SetupProgress.NotRequired });
-        await AssertRefusedAsync(fixture, job, "does not match");
+        await AssertRefusedAsync(fixture, job, "不匹配");
     }
 
     // ---- state of the job -----------------------------------------------------------------------------------------------
@@ -359,10 +359,10 @@ public sealed class ResumeRefusalTests
         var refused = await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Engine.ResumeAsync(
             Path.Combine(done.WorkDirectory, "job.json"), JobScenarios.OriginalRecipe(done.WorkDirectory) with
             { OutputPath = Path.Combine(fixture.Root, "again.iso") }, null, CancellationToken.None));
-        Assert.Contains("already completed", refused.Message);
+        Assert.Contains("已完成", refused.Message);
         var job = await JobScenarios.InterruptAtCommitAsync(fixture, fixture.Recipe with { OutputPath = Path.Combine(fixture.Root, "second.iso") });
         await fixture.Engine.RecoverAsync(JobScenarios.JobFile(job), fixture.Recipe.DismPath, CancellationToken.None, discardCommitted: true);
-        await AssertRefusedAsync(fixture, job, "recovered", JobScenarios.OriginalRecipe(job.WorkDirectory));
+        await AssertRefusedAsync(fixture, job, "已恢复", JobScenarios.OriginalRecipe(job.WorkDirectory));
     }
 
     [Fact]

@@ -137,11 +137,10 @@ public sealed partial class BuildEngine
         original.ValidateOptions();
         var differences = FrozenDifferences(original, requested);
         if (differences.Length > 0)
-            throw new InvalidDataException($"继续方案更改了此作业已冻结的设置（{string.Join(", ", differences)}). " +
-                "Only the output location, servicing tools, final compression and keeping working files can change.");
+            throw new InvalidDataException($"继续方案更改了此作业已冻结的设置（{string.Join(", ", differences)}）。 " +
+                "仅可更改输出位置、维护工具、最终压缩与是否保留工作文件。");
         if (!committed && requested.Compression != checkpoint.CompressedWith)
-            throw new InvalidDataException($"最终映像已使用 {checkpoint.CompressedWith}; " +
-                $"it cannot be resumed with {requested.Compression}.");
+            throw new InvalidDataException($"最终映像已使用 {checkpoint.CompressedWith} 压缩，无法以 {requested.Compression} 继续。");
         if (!Path.GetDirectoryName(directory)!.Equals(PathSafety.Full(original.WorkspacePath), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("此作业不在其方案指定的工作区内。");
         if (SetupInstaller.RequiresBootEdit(original) != (checkpoint.SetupState != SetupProgress.NotRequired) &&
@@ -167,8 +166,8 @@ public sealed partial class BuildEngine
             var transient = SamePath(mountDirectory, jobMount) && imageFile is not null &&
                 SamePath(imageFile, Path.Combine(directory, "setup", "boot.wim"));
             if (!transient)
-                throw new InvalidDataException($"此作业的映像仍挂载在 ({mountDirectory})。 " +
-                    "Resume continues only from an unmounted, committed image; unmount it first.");
+                throw new InvalidDataException($"此作业的映像仍挂载在（{mountDirectory}）。 " +
+                    "继续构建仅可从已卸载且已提交的映像开始；请先卸载。");
             staleSetupMount = true;
         }
         if (!staleSetupMount && Directory.Exists(jobMount) && Directory.EnumerateFileSystemEntries(jobMount).Any())
@@ -247,7 +246,7 @@ public sealed partial class BuildEngine
         if (actual.Architecture != expected.Architecture || actual.Version != expected.Version ||
             !actual.Edition.Equals(expected.Edition, StringComparison.OrdinalIgnoreCase) ||
             !actual.Installation.Equals(expected.Installation, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"{what} is a 不同的 Windows 映像 ({actual.Summary}) 与此作业正在构建的映像 ({expected.Summary}).");
+            throw new InvalidDataException($"{what} 是不同的 Windows 映像（{actual.Summary}），与此作业正在构建的映像（{expected.Summary}）不同。");
     }
 
     // Frozen by default: a field added to BuildRecipe later cannot change on resume unless it is listed as free here.
